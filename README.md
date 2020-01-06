@@ -1,8 +1,19 @@
-# eslint-plugin-highcharts
+eslint-plugin-highcharts
+========================
 
 ESLint rules for the Highcharts project
 
-## Installation
+
+
+Adding new rules
+----------------
+
+Navigate to this folder and run `yo eslint:rule`.
+
+
+
+Installation
+------------
 
 You'll first need to install [ESLint](http://eslint.org):
 
@@ -18,7 +29,10 @@ $ npm install eslint-plugin-highcharts --save-dev
 
 **Note:** If you installed ESLint globally (using the `-g` flag) then you must also install `eslint-plugin-highcharts` globally.
 
-## Usage
+
+
+Usage
+-----
 
 Add `highcharts` to the plugins section of your `.eslintrc` configuration file. You can omit the `eslint-plugin-` prefix:
 
