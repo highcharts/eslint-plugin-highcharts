@@ -27,10 +27,10 @@ ruleTester.run("no-newline-in-doclet-code", rule, {
 
     invalid: [
         {
-            code: "This is a `class-\nname`",
+            code: 'This is a `class-\n\nname`',
             errors: [{
-                message: "Fill me in.",
-                type: "Me too"
+                message: "No newlines are allowed inside backticks in doclets.",
+                type: "Program"
             }]
         }
     ]
