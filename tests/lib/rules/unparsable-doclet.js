@@ -29,8 +29,8 @@ ruleTester.run("unparsable-doclet", rule, {
         {
             code: "{ foo: 'bar' /** Some doclet */ }",
             errors: [{
-                message: "Fill me in.",
-                type: "Me too"
+                message: "Doclet at the end of an object literal is not parsable",
+                type: "Program"
             }]
         }
     ]
