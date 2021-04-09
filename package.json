@@ -1,6 +1,6 @@
 {
     "name": "eslint-plugin-highcharts",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "description": "ESLint rules for the Highcharts project",
     "keywords": [
         "eslint",
@@ -13,11 +13,11 @@
         "test": "mocha tests --recursive"
     },
     "dependencies": {
-        "requireindex": "~1.1.0"
+        "requireindex": "~1.2.0"
     },
     "devDependencies": {
-        "eslint": "^5.16.0",
-        "mocha": "^7.0.0"
+        "eslint": "^7.23.0",
+        "mocha": "^8.3.2"
     },
     "engines": {
         "node": ">=0.10.0"
