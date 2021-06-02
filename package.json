@@ -1,13 +1,17 @@
 {
     "name": "eslint-plugin-highcharts",
-    "version": "1.0.6",
+    "version": "1.0.7",
     "description": "ESLint rules for the Highcharts project",
     "keywords": [
         "eslint",
         "eslintplugin",
         "eslint-plugin"
     ],
-    "author": "Torstein",
+    "author": "Highsoft AS <support@highcharts.com> (http://www.highcharts.com/about)",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/highcharts/eslint-plugin-highcharts.git"
+    },
     "main": "lib/index.js",
     "scripts": {
         "test": "mocha tests --recursive"
@@ -16,8 +20,8 @@
         "requireindex": "~1.2.0"
     },
     "devDependencies": {
-        "eslint": "^7.23.0",
-        "mocha": "^8.3.2"
+        "eslint": "^7.27.0",
+        "mocha": "^8.4.0"
     },
     "engines": {
         "node": ">=0.10.0"
