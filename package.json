@@ -1,6 +1,6 @@
 {
     "name": "eslint-plugin-highcharts",
-    "version": "1.0.8",
+    "version": "1.0.9",
     "description": "ESLint rules for the Highcharts project",
     "keywords": [
         "eslint",
