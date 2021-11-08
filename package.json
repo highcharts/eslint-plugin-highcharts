@@ -1,7 +1,7 @@
 {
     "name": "eslint-plugin-highcharts",
     "license": "ISC",
-    "version": "1.0.10",
+    "version": "2.0.0",
     "description": "ESLint rules for the Highcharts project",
     "keywords": [
         "eslint",
@@ -17,7 +17,8 @@
     "scripts": {
         "build": "npx tsc -b sources",
         "lint": "npx eslint sources",
-        "test": "mocha tests --recursive"
+        "test": "mocha tests --recursive",
+        "watch": "npm run build -- --watch"
     },
     "dependencies": {
         "eslint": "^7.27.0",
