@@ -1,5 +1,6 @@
 {
     "name": "eslint-plugin-highcharts",
+    "license": "ISC",
     "version": "1.0.10",
     "description": "ESLint rules for the Highcharts project",
     "keywords": [
@@ -14,17 +15,29 @@
     },
     "main": "lib/index.js",
     "scripts": {
+        "build": "npx tsc -b sources",
+        "lint": "npx eslint sources",
         "test": "mocha tests --recursive"
     },
     "dependencies": {
+        "eslint": "^7.27.0",
         "requireindex": "~1.2.0"
     },
     "devDependencies": {
-        "eslint": "^7.27.0",
-        "mocha": "^9.1.2"
+        "@types/eslint": "7.28.2",
+        "@types/node": "12.20.36",
+        "@typescript-eslint/eslint-plugin": "^5.3.0",
+        "@typescript-eslint/parser": "^5.3.0",
+        "husky": "7.0.4",
+        "mocha": "^9.1.2",
+        "typescript": "^4.4.4"
     },
     "engines": {
-        "node": ">=0.10.0"
+        "node": ">=12.0.0"
     },
-    "license": "ISC"
+    "husky": {
+        "hooks": {
+            "pre-commit": "npm run lint && npm run build && npm test"
+        }
+    }
 }
