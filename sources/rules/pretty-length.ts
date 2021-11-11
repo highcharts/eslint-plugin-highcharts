@@ -16,8 +16,10 @@
 
 import * as FS from 'fs';
 import * as TS from 'typescript';
+import * as U from '../Utilities';
 import RuleContext from '../RuleContext';
 import RuleOptions from '../RuleOptions';
+import SourceLine from '../SourceLine';
 
 
 /* *
@@ -44,7 +46,7 @@ interface PrettyLengthOptions extends RuleOptions {
  * */
 
 
-const messageTemplate = 'Code line exceeds limit of {0} characters.';
+const messageTemplate = 'Line exceeds limit of {0} characters.';
 
 
 const optionsDefaults: PrettyLengthOptions = {
@@ -62,15 +64,6 @@ const optionsSchema = {
 }
 
 
-const regExps = {
-    breakSplit: /\n/gu,
-    docletTag: /^(@[A-Za-z][\w-]+)\s+(?:(\{[^\}]+\})\s+)?([\s\S]*)$/u,
-    docletTagSplit: /(?<=\s)(?=@[A-Za-z])/gu,
-    docletTagTrim: /^\s*\*\s+/mu,
-    spaceSplit: /\s+/gsu
-}
-
-
 /* *
  *
  *  Functions
@@ -83,55 +76,71 @@ function fix(
 ): void {
     const docletASTs: Array<TS.JSDoc> = [];
 
-    context.fix((transformationConext, node) => {
-        if (TS.isJSDoc(node)) {
-            process.stdout.write('.');
-            return transformationConext.factory.createJSDocComment(
-                (TS.getTextOfJSDocComment(node.comment) || '').toUpperCase(),
-                node.tags
-            );
-        }
-        return node;
-    });
+    context.sourceCode.lines.forEach(
+        sourceLine => docletASTs.push(...U.getJSDocs(sourceLine))
+    );
 
     FS.writeFileSync(
-        context.sourceFile.fileName + '.json',
-        JSON.stringify(docletASTs, ['comment', 'name', 'tags', 'text'], '  ')
+        context.sourceCode.fileName + '.json',
+        JSON.stringify(
+            docletASTs,
+            [
+                'name',
+                'comment',
+                'text',
+                'tags',
+                'kind',
+                'flags',
+                'modifierFlagsCache',
+                'transformFlags',
+                'end',
+                'pos',
+            ],
+            '  '
+        )
     );
+}
+
+
+function fixJSDoc(
+    context: PrettyLengthContext
+): void {
+    // @todo
 }
 
 
 function lint (
     context: PrettyLengthContext
 ) {
-    const sourceTextLines = context.sourceFile.getFullText().split(regExps.breakSplit),
+    const sourceLines = context.sourceCode.lines,
         {
             ignorePattern,
             maximalLength
-        } = setupOptions(context.options),
+        } = context.options,
         ignoreRegExp = (ignorePattern && new RegExp(ignorePattern));
 
-    console.log('Checking', context.sourceFile.fileName);
+    console.log('Checking', context.sourceCode.fileName);
 
     for (
         let line = 0,
-            lineEnd = sourceTextLines.length,
-            sourceTextLength: number,
-            sourceTextLine: string;
+            lineEnd = sourceLines.length,
+            sourceLine: SourceLine,
+            sourceLineLength: number;
         line < lineEnd;
         ++line
     ) {
-        sourceTextLine = sourceTextLines[line];
-        sourceTextLength = sourceTextLine.length;
+        sourceLine = sourceLines[line];
 
         if (
             ignoreRegExp &&
-            ignoreRegExp.test(sourceTextLine)
+            ignoreRegExp.test(sourceLine.toString())
         ) {
             continue;
         }
 
-        if (sourceTextLength > maximalLength) {
+        sourceLineLength = sourceLine.getLength();
+
+        if (sourceLineLength > maximalLength) {
             context.report(
                 line,
                 maximalLength - 1,
@@ -139,20 +148,6 @@ function lint (
             );
         }
     }
-}
-
-
-function setupOptions(
-    options: Partial<PrettyLengthOptions>
-): PrettyLengthOptions {
-    return {
-        ignorePattern: options.ignorePattern || optionsDefaults.ignorePattern,
-        indentSize: options.indentSize || optionsDefaults.indentSize,
-        maximalLength: (
-            options.maximalLength ||
-            optionsDefaults.maximalLength
-        )
-    };
 }
 
 
@@ -166,6 +161,7 @@ function setupOptions(
 export = RuleContext.setupRuleExport(
     'layout',
     optionsSchema,
+    optionsDefaults,
     lint,
     fix
 );
