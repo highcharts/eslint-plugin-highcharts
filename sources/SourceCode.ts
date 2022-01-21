@@ -13,6 +13,8 @@
  * */
 
 
+import type SourceToken from './SourceToken';
+
 import * as TS from 'typescript';
 import SourceLine from './SourceLine';
 
@@ -62,6 +64,60 @@ export class SourceCode {
      *  Functions
      *
      * */
+
+
+    public getLinePos(
+        sourceLine: SourceLine
+    ): number {
+        const lines = this.lines,
+            lineIndex = lines.indexOf(sourceLine);
+
+        if (lineIndex === -1) {
+            return -1;
+        }
+
+        let pos = 0;
+
+        for (let i = 0, iEnd = lineIndex; i < iEnd; ++i) {
+            pos += lines[i].getLength() + 1; // + line break
+        }
+
+        return pos;
+    }
+
+
+    public getTokenPos(
+        sourceToken: SourceToken
+    ): number {
+        const lines = this.lines;
+
+        let line: SourceLine,
+            pos = 0,
+            tokenIndex = -1;
+
+        for (let i = 0, iEnd = lines.length; i < iEnd; ++i) {
+            line = lines[i];
+            tokenIndex = line.tokens.indexOf(sourceToken);
+
+            if (tokenIndex >= 0) {
+                const tokens = line.tokens;
+
+                for (let j = 0, jEnd = tokenIndex; j < jEnd; ++j) {
+                    pos += tokens[j].text.length;
+                }
+
+                break;
+            }
+
+            pos += lines[i].getLength() + 1; // + line break
+        }
+
+        if (tokenIndex === -1) {
+            return -1;
+        }
+
+        return pos;
+    }
 
 
     public parse (

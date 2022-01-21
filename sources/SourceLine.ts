@@ -15,6 +15,8 @@
 
 import type SourceToken from './SourceToken';
 
+import * as TS from 'typescript';
+
 
 /* *
  *
@@ -41,6 +43,17 @@ export class SourceLine {
      *  Functions
      *
      * */
+
+
+    public getIndent(): number {
+        const firstToken = this.tokens[0];
+
+        if (firstToken.kind === TS.SyntaxKind.WhitespaceTrivia) {
+            return firstToken.text.length;
+        }
+
+        return 0;
+    }
 
 
     public getLength(): number {
