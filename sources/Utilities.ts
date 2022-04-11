@@ -14,7 +14,6 @@
 
 
 import * as TS from 'typescript';
-import SourceLine from './SourceLine';
 
 
 /* *
@@ -29,43 +28,39 @@ export interface DocumentedNode extends TS.Node {
 }
 
 
+export type JSDocTagKind = (
+    TS.SyntaxKind.JSDocAugmentsTag|
+    TS.SyntaxKind.JSDocAuthorTag|
+    TS.SyntaxKind.JSDocCallbackTag|
+    TS.SyntaxKind.JSDocClassTag|
+    TS.SyntaxKind.JSDocDeprecatedTag|
+    TS.SyntaxKind.JSDocEnumTag|
+    TS.SyntaxKind.JSDocImplementsTag|
+    TS.SyntaxKind.JSDocOverrideTag|
+    TS.SyntaxKind.JSDocParameterTag|
+    TS.SyntaxKind.JSDocPrivateTag|
+    TS.SyntaxKind.JSDocPropertyTag|
+    TS.SyntaxKind.JSDocProtectedTag|
+    TS.SyntaxKind.JSDocPublicTag|
+    TS.SyntaxKind.JSDocReadonlyTag|
+    TS.SyntaxKind.JSDocReturnTag|
+    TS.SyntaxKind.JSDocSeeTag|
+    TS.SyntaxKind.JSDocTag|
+    TS.SyntaxKind.JSDocTemplateTag|
+    TS.SyntaxKind.JSDocThisTag|
+    TS.SyntaxKind.JSDocTypeTag|
+    TS.SyntaxKind.JSDocTypedefTag
+);
+
+
+export type UnknownObject = Record<string, unknown>;
+
+
 /* *
  *
  *  Functions
  *
  * */
-
-
-export function getJSDocs(
-    sourceLine: SourceLine
-): Array<TS.JSDoc> {
-    const code = sourceLine.tokens
-        .filter(token => token.kind === TS.SyntaxKind.MultiLineCommentTrivia)
-        .map(token => token.text)
-        .join('');
-
-    if (!code.length) {
-        return [];
-    }
-
-    const source = TS.createSourceFile('', code, TS.ScriptTarget.Latest),
-        jsDocs: Array<TS.JSDoc> = [],
-        extract = (node: TS.Node) => {
-            if (isDocumentedNode(node)) {
-                const jsDoc = node.jsDoc;
-                for (let i = 0, iEnd = jsDoc.length; i < iEnd; ++i) {
-                    if (!jsDocs.includes(jsDoc[i])) {
-                        jsDocs.push(jsDoc[i]);
-                    }
-                }
-            }
-            node.getChildren(source).forEach(extract);
-        };
-
-    extract(source);
-
-    return jsDocs;
-}
 
 
 /**
@@ -125,7 +120,7 @@ export function isDocumentedNode<T extends TS.Node>(
     node: T
 ): node is (T&DocumentedNode) {
     return (
-        typeof (node as unknown as Record<string, unknown>).jsDoc === 'object'
+        typeof (node as unknown as DocumentedNode).jsDoc === 'object'
     )
 }
 
