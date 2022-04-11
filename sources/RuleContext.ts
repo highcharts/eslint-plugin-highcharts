@@ -16,7 +16,6 @@
 import type * as ESLint from 'eslint';
 import type * as JSONSchema from 'json-schema';
 import type FixFunction from './FixFunction';
-import type LineSegment from './SourceLine';
 import type LintFunction from './LintFunction';
 import type RuleOptions from './RuleOptions';
 
@@ -25,6 +24,7 @@ import * as Path from 'path';
 import * as TS from 'typescript';
 import RuleType from './RuleType';
 import SourceCode from './SourceCode';
+import SourceTree from './SourceTree';
 
 
 /* *
@@ -98,11 +98,7 @@ export class RuleContext<T extends RuleOptions = RuleOptions> {
         };
         this.fixFunction = fixFunction;
 
-        this.sourcePath = Path.relative(this.cwd, esLintContext.getFilename()),
-        this.sourceCode = new SourceCode(
-            this.sourcePath,
-            FS.readFileSync(this.sourcePath).toString()
-        );
+        this.sourcePath = Path.relative(this.cwd, esLintContext.getFilename());
     }
 
 
@@ -111,6 +107,12 @@ export class RuleContext<T extends RuleOptions = RuleOptions> {
      *  Properties
      *
      * */
+
+
+    private _sourceCode?: SourceCode;
+
+
+    private _sourceTree?: SourceTree;
 
 
     private changes: Array<TS.TextChangeRange>;
@@ -134,10 +136,31 @@ export class RuleContext<T extends RuleOptions = RuleOptions> {
     public settings: ESLint.Rule.RuleContext['settings'];
 
 
-    public sourceCode: SourceCode;
+    public get sourceCode (): SourceCode {
+        if (!this._sourceCode) {
+            this._sourceCode = new SourceCode(
+                this.sourcePath,
+                FS.readFileSync(this.sourcePath).toString()
+            );
+        }
+
+        return this._sourceCode;
+    }
 
 
     public sourcePath: string;
+
+
+    public get sourceTree (): SourceTree {
+        if (!this._sourceTree) {
+            this._sourceTree = new SourceTree(
+                this.sourcePath,
+                FS.readFileSync(this.sourcePath).toString()
+            );
+        }
+
+        return this._sourceTree;
+    }
 
 
     /* *
