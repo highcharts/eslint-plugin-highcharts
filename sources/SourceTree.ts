@@ -14,6 +14,7 @@
 
 
 import * as TS from 'typescript';
+import * as SP from './SourceParser';
 import SourceNode from './SourceNode';
 import SourceToken from './SourceToken';
 
@@ -79,13 +80,12 @@ export class SourceTree {
             return;
         }
 
-        const sourceFile = TS.createSourceFile(
+        const tsSourceFile = TS.createSourceFile(
                 '',
                 sourceCode,
                 TS.ScriptTarget.Latest
             ),
-            tree = SourceNode.parse(sourceFile, sourceFile),
-            roots = tree.children?.[0].children;
+            roots = SP.parseChildren(tsSourceFile, tsSourceFile.getChildren());
 
         if (roots) {
             for (let i = 0, iEnd = roots.length; i < iEnd; ++i) {
@@ -95,18 +95,18 @@ export class SourceTree {
     }
 
 
-    public toTokens (): Array<SourceToken> {
+    public toArray (): Array<SourceNode> {
         const nodes = this.nodes,
-            tokens: Array<SourceToken> = [];
+            result: Array<SourceNode> = [];
 
         for (
             let i = 0,
                 iEnd = nodes.length,
-                nodesChildren: Array<SourceToken>;
+                nodesChildren: Array<SourceNode>;
             i < iEnd;
             ++i
         ) {
-            nodesChildren = nodes[i].toTokens();
+            nodesChildren = nodes[i].toArray();
 
             for (
                 let j = 0,
@@ -114,11 +114,11 @@ export class SourceTree {
                 j < jEnd;
                 ++j
             ) {
-                tokens.push(nodesChildren[j]);
+                result.push(nodesChildren[j]);
             }
         }
 
-        return tokens;
+        return result;
     }
 
 

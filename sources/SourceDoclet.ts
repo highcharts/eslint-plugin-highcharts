@@ -37,6 +37,7 @@ export class SourceDoclet extends SourceLine implements SourceToken {
      *
      * */
 
+
     public static parse (
         sourceToken: SourceToken
     ): (SourceDoclet|null) {

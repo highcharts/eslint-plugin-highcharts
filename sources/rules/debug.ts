@@ -64,29 +64,21 @@ function lint (
 ) {
     const onlyKindOf = context.options.onlyKindOf,
         sourceTree = context.sourceTree,
-        sourceTokens = sourceTree.toTokens();
+        sourceNodes = sourceTree.toArray();
 
-    for (
-        let i = 0,
-            iEnd = sourceTokens.length,
-            sourcePosition: number = 0,
-            sourceToken: SourceToken;
-        i < iEnd;
-        ++i
-    ) {
-        sourceToken = sourceTokens[i];
+    for (const sourceNode of sourceNodes) {
 
-        if (onlyKindOf && !onlyKindOf.includes(sourceToken.kind)) {
+        if (onlyKindOf && !onlyKindOf.includes(sourceNode.kind)) {
             continue;
         }
 
-        context.report(
-            0,
-            0,
-            `SyntaxKind: ${sourceToken.kind} ${TS.SyntaxKind[sourceToken.kind]} @ ${sourcePosition}`
+        console.log(
+            sourceNode.kind,
+            TS.SyntaxKind[sourceNode.kind],
+            sourceNode.text,
+            sourceNode.type,
+            sourceNode.doclet
         );
-
-        sourcePosition += sourceToken.text.length;
     }
 }
 

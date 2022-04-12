@@ -13,10 +13,9 @@
  * */
 
 
-import type SourceToken from './SourceToken';
-
 import * as TS from 'typescript';
 import SourceLine from './SourceLine';
+import SourceToken from './SourceToken';
 
 
 /* *

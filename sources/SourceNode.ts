@@ -6,6 +6,7 @@
 
 
 import * as TS from 'typescript';
+import SourceDoclet from './SourceDoclet';
 import SourceToken from './SourceToken';
 
 
@@ -17,42 +18,6 @@ import SourceToken from './SourceToken';
 
 
 export class SourceNode implements SourceToken {
-
-
-    /* *
-     *
-     *  Static Properties
-     *
-     * */
-
-
-    public static parse (
-        sourceFile: TS.SourceFile,
-        node: TS.Node
-    ): SourceNode {
-        const nodeChildren = node.getChildren(sourceFile),
-            sourceNode = new SourceNode(node.kind);
-
-        if (nodeChildren.length) {
-            const sourceChildren: Array<SourceNode> = sourceNode.children = [];
-
-            for (
-                let i = 0,
-                    iEnd = nodeChildren.length,
-                    sourceChild: SourceNode;
-                i < iEnd;
-                ++i
-            ) {
-                sourceChild = SourceNode.parse(sourceFile, nodeChildren[i]);
-                sourceChild.parent = sourceNode;
-                sourceChildren.push(sourceChild);
-            }
-        } else {
-            sourceNode.text = node.getText(sourceFile);
-        }
-
-        return sourceNode;
-    }
 
 
     /* *
@@ -79,13 +44,16 @@ export class SourceNode implements SourceToken {
     public children?: Array<SourceNode>;
 
 
+    public doclet?: string;
+
+
     public kind: TS.SyntaxKind;
 
 
-    public parent?: SourceNode;
-
-
     public text: string;
+
+
+    public type?: string;
 
 
     /* *
@@ -93,6 +61,39 @@ export class SourceNode implements SourceToken {
      *  Functions
      *
      * */
+
+
+    public toArray(): Array<SourceNode> {
+        const children = this.children,
+            parent = new SourceNode(this.kind, this.text),
+            result: Array<SourceNode> = [parent];
+
+        parent.doclet = this.doclet;
+        parent.type = this.type;
+
+        if (children) {
+            for (
+                let i = 0,
+                    iEnd = children.length,
+                    childrensChildren: Array<SourceNode>;
+                i < iEnd;
+                ++i
+            ) {
+                childrensChildren = children[i].toArray();
+
+                for (
+                    let j = 0,
+                    jEnd = childrensChildren.length;
+                    j < jEnd;
+                    ++j
+                ) {
+                    result.push(childrensChildren[j]);
+                }
+            }
+        }
+
+        return result;
+    }
 
 
     public toString(): string {
@@ -107,35 +108,6 @@ export class SourceNode implements SourceToken {
         }
 
         return text;
-    }
-
-
-    public toTokens(): Array<SourceToken> {
-        const children = this.children,
-            tokens: Array<SourceToken> = [this];
-
-        if (children) {
-            for (
-                let i = 0,
-                    iEnd = children.length,
-                    childrensChildren: Array<SourceToken>;
-                i < iEnd;
-                ++i
-            ) {
-                childrensChildren = children[i].toTokens();
-
-                for (
-                    let j = 0,
-                    jEnd = childrensChildren.length;
-                    j < jEnd;
-                    ++j
-                ) {
-                    tokens.push(childrensChildren[j]);
-                }
-            }
-        }
-
-        return tokens;
     }
 
 
