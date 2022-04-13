@@ -19,16 +19,14 @@ import SourceNode from './SourceNode';
 
 
 function ignoreChildrenOf(
-    _tsSourceFile: TS.SourceFile,
     tsNode: TS.Node
 ): boolean {
     return (
-        tsNode.kind === TS.SyntaxKind.FirstStatement ||
         TS.isExpressionStatement(tsNode) ||
         TS.isImportDeclaration(tsNode) ||
         TS.isPropertySignature(tsNode) ||
         TS.isReturnStatement(tsNode) ||
-        TS.isVariableDeclarationList(tsNode)
+        TS.isVariableDeclaration(tsNode)
     );
 }
 
@@ -67,11 +65,17 @@ export function parse(
         sourceNode = parseInterface(tsSourceFile, tsNode);
     } else if (TS.isModuleDeclaration(tsNode)) {
         sourceNode = parseModule(tsSourceFile, tsNode);
-    } else if (ignoreChildrenOf(tsSourceFile, tsNode)) {
+    } else if (TS.isVariableStatement(tsNode)) {
+        sourceNode = parseVariables(tsSourceFile, tsNode);
+    } else if (ignoreChildrenOf(tsNode)) {
+        const types = U.extractTypes(tsSourceFile, tsNode);
+
         sourceNode = new SourceNode(
             tsNode.kind,
             tsNode.getText(tsSourceFile)
         );
+
+        sourceNode.types = types;
     } else {
         const tsNodeChildren = tsNode.getChildren(tsSourceFile);
         sourceNode = new SourceNode(tsNode.kind);
@@ -101,15 +105,19 @@ export function parseChildren(
 ): Array<SourceNode> {
     const sourceChildren: Array<SourceNode> = [];
 
-    for (const tsChild of tsNodeChildren) {
-        if (tsChild.kind === TS.SyntaxKind.SyntaxList) {
+    for (const tsNodeChild of tsNodeChildren) switch (tsNodeChild.kind) {
+        case TS.SyntaxKind.CommaToken:
+            continue;
+
+        case TS.SyntaxKind.SyntaxList:
             return parseChildren(
                 tsSourceFile,
-                tsChild.getChildren(tsSourceFile)
+                tsNodeChild.getChildren(tsSourceFile)
             );
-        } else {
-            sourceChildren.push(parse(tsSourceFile, tsChild));
-        }
+
+        default:
+            sourceChildren.push(parse(tsSourceFile, tsNodeChild));
+            continue;
     }
 
     return sourceChildren;
@@ -178,14 +186,14 @@ function parseIf(
     );
 
     if (tsNode.elseStatement) {
-        const firstChild = tsNode.elseStatement.getFirstToken(tsSourceFile);
+        const tsFirstChild = tsNode.elseStatement.getFirstToken(tsSourceFile);
 
         if (
-            firstChild &&
-            TS.isIfStatement(firstChild) &&
+            tsFirstChild &&
+            TS.isIfStatement(tsFirstChild) &&
             tsNode.elseStatement.getChildCount(tsSourceFile) === 1
         ) {
-            const elseIfSourceNode = parseIf(tsSourceFile, firstChild);
+            const elseIfSourceNode = parseIf(tsSourceFile, tsFirstChild);
 
             elseIfSourceNode.text = `else ${elseIfSourceNode.text}`;
 
@@ -222,7 +230,9 @@ function parseInterface(
     }
 
     if (tsNode.heritageClauses) {
-        sourceNode.type = joinNodeArray(tsSourceFile, tsNode.heritageClauses);
+        sourceNode.types = [
+            joinNodeArray(tsSourceFile, tsNode.heritageClauses)
+        ];
     }
 
     return sourceNode;
@@ -244,6 +254,30 @@ function parseModule(
             tsNode.body.getChildren(tsSourceFile)
         );
     }
+
+    return sourceNode;
+}
+
+
+function parseVariables(
+    tsSourceFile: TS.SourceFile,
+    tsNode: TS.VariableStatement
+): SourceNode {
+    const tsFirstChild = tsNode.getFirstToken(tsSourceFile);
+
+    if (!tsFirstChild) {
+        return new SourceNode(tsNode.kind);
+    }
+
+    const sourceNode = new SourceNode(
+        tsNode.declarationList.kind,
+        tsFirstChild.getText(tsSourceFile)
+    );
+
+    sourceNode.children = parseChildren(
+        tsSourceFile,
+        tsNode.declarationList.getChildren(tsSourceFile)
+    );
 
     return sourceNode;
 }
