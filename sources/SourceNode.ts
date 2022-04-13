@@ -53,7 +53,7 @@ export class SourceNode implements SourceToken {
     public text: string;
 
 
-    public type?: string;
+    public types?: Array<string>;
 
 
     /* *
@@ -69,7 +69,7 @@ export class SourceNode implements SourceToken {
             result: Array<SourceNode> = [parent];
 
         parent.doclet = this.doclet;
-        parent.type = this.type;
+        parent.types = this.types;
 
         if (children) {
             for (

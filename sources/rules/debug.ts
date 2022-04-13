@@ -76,7 +76,7 @@ function lint (
             sourceNode.kind,
             TS.SyntaxKind[sourceNode.kind],
             sourceNode.text,
-            sourceNode.type,
+            sourceNode.types,
             sourceNode.doclet
         );
     }
