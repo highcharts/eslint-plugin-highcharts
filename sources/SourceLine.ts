@@ -13,9 +13,10 @@
  * */
 
 
-import type SourceToken from './SourceToken';
-
 import * as TS from 'typescript';
+import SourceCode from './SourceCode';
+import SourcePosition from './SourcePosition';
+import SourceToken from './SourceToken';
 
 
 /* *
@@ -69,13 +70,66 @@ export class SourceLine {
     }
 
 
-    public toString(): string {
-        const tokens = this.tokens;
+    public getPosition(
+        sourceCode: SourceCode,
+        token?: SourceToken
+    ): (SourcePosition|null) {
+        const lines = sourceCode.lines,
+            lineIndex = lines.indexOf(this),
+            position: SourcePosition = {
+                column: 1,
+                end: 0,
+                line: 1,
+                start: 0
+            };
 
+        if (lineIndex === -1) {
+            return null;
+        }
+
+        let tokens: Array<SourceToken>;
+
+        for (let i = 0, iLast = lineIndex, match: (RegExpMatchArray|null); i <= iLast; ++i) {
+
+            position.column = 1;
+            tokens = lines[i].tokens;
+
+            for (const lineToken of tokens) {
+
+                if (i === iLast) {
+                    if (!token) {
+                        return position;
+                    } else if (lineToken === token) {
+                        position.end = position.start + lineToken.text.length;
+                        console.log(position);
+                        return position;
+                    }
+                }
+
+                if (lineToken.kind === TS.SyntaxKind.MultiLineCommentTrivia) {
+                    match = lineToken.text.match(/\n|\r|\r\n/g);
+
+                    if (match) {
+                        position.line += match.length;
+                    }
+                }
+
+                position.column += lineToken.text.length;
+                position.start += lineToken.text.length;
+            }
+
+            position.line += 1;
+        }
+
+        return null;
+    }
+
+
+    public toString(): string {
         let text = '';
 
-        for (let i = 0, iEnd = tokens.length; i < iEnd; ++i) {
-            text += tokens[i].text;
+        for (const token of this.tokens) {
+            text += token.text;
         }
 
         return text;
