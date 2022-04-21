@@ -15,8 +15,8 @@ import type * as TS from 'typescript';
  * */
 
 
-export interface SourceToken {
-    kind: TS.SyntaxKind;
+export interface SourceToken<T extends TS.SyntaxKind = TS.SyntaxKind> {
+    kind: T;
     text: string;
 }
 

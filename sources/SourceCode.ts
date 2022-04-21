@@ -14,6 +14,7 @@
 
 
 import * as TS from 'typescript';
+import SourceComment from './SourceComment';
 import SourceLine from './SourceLine';
 import SourceToken from './SourceToken';
 
@@ -145,10 +146,14 @@ export class SourceCode {
             kind = scanner.scan();
             text = scanner.getTokenText();
 
-            line.tokens.push({
-                kind,
-                text
-            });
+            if (
+                kind === TS.SyntaxKind.MultiLineCommentTrivia ||
+                kind === TS.SyntaxKind.SingleLineCommentTrivia
+            ) {
+                line.tokens.push(new SourceComment(kind, text));
+            } else {
+                line.tokens.push({ kind, text });
+            }
 
             if (
                 kind === TS.SyntaxKind.NewLineTrivia ||

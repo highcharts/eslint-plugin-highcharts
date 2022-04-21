@@ -101,7 +101,6 @@ export class SourceLine {
                         return position;
                     } else if (lineToken === token) {
                         position.end = position.start + lineToken.text.length;
-                        console.log(position);
                         return position;
                     }
                 }

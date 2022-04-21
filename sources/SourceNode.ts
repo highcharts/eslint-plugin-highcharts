@@ -6,7 +6,6 @@
 
 
 import * as TS from 'typescript';
-import SourceDoclet from './SourceDoclet';
 import SourceToken from './SourceToken';
 
 

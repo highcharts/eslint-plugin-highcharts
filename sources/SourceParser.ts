@@ -7,7 +7,6 @@
 
 import * as TS from 'typescript';
 import * as U from './Utilities';
-import SourceDoclet from './SourceDoclet';
 import SourceNode from './SourceNode';
 
 
