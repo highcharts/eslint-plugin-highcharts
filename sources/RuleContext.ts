@@ -21,9 +21,9 @@ import type RuleOptions from './RuleOptions';
 
 import * as FS from 'fs';
 import * as Path from 'path';
-import * as TS from 'typescript';
 import RuleType from './RuleType';
 import SourceCode from './SourceCode';
+import SourcePosition from './SourcePosition';
 import SourceTree from './SourceTree';
 
 
@@ -49,11 +49,11 @@ export class RuleContext<T extends RuleOptions = RuleOptions> {
         ruleOptionsSchema: JSONSchema.JSONSchema4,
         ruleOptionsDefault: T,
         lintFunction: LintFunction<T>,
-        fixFunction?: FixFunction<T>
+        reportWithFix?: boolean
     ): ESLint.Rule.RuleModule {
         return {
             meta: {
-                fixable: fixFunction ? 'code' : void 0,
+                fixable: reportWithFix ? 'code' : void 0,
                 schema: [{
                     additionalProperties: false,
                     properties: ruleOptionsSchema,
@@ -65,8 +65,7 @@ export class RuleContext<T extends RuleOptions = RuleOptions> {
                 {
                     Program: () => lintFunction(new RuleContext(
                         esLintRuleContext,
-                        ruleOptionsDefault,
-                        fixFunction
+                        ruleOptionsDefault
                     ))
                 }
             )
@@ -83,20 +82,16 @@ export class RuleContext<T extends RuleOptions = RuleOptions> {
 
     private constructor (
         esLintContext: ESLint.Rule.RuleContext,
-        ruleOptionsDefault: T,
-        fixFunction?: FixFunction<T>
+        ruleOptionsDefault: T
     ) {
-        this.changes = [];
         this.cwd = esLintContext.getCwd();
         this.esLintContext = esLintContext;
-        this.fixes = [];
         this.settings = ((esLintContext.settings || {}).highcharts || {});
         this.options = {
             ...ruleOptionsDefault,
             ...this.settings,
             ...(esLintContext.options[1] || {})
         };
-        this.fixFunction = fixFunction;
 
         this.sourcePath = Path.relative(this.cwd, esLintContext.getFilename());
     }
@@ -115,19 +110,10 @@ export class RuleContext<T extends RuleOptions = RuleOptions> {
     private _sourceTree?: SourceTree;
 
 
-    private changes: Array<TS.TextChangeRange>;
-
-
     private cwd: string;
 
 
     private esLintContext: ESLint.Rule.RuleContext;
-
-
-    private fixes: Array<ESLint.Rule.Fix>;
-
-
-    private fixFunction?: FixFunction<T>;
 
 
     public options: T;
@@ -171,27 +157,19 @@ export class RuleContext<T extends RuleOptions = RuleOptions> {
 
 
     public report (
-        line: number,
-        column: number,
-        message: string
+        position: SourcePosition,
+        message: string,
+        fix?: ESLint.Rule.ReportFixer
     ): void {
-        const report: ESLint.Rule.ReportDescriptor = {
+        this.esLintContext.report( {
+            fix,
             loc: {
-                column,
-                line
+                // ESLint needs column zero-based:
+                column: position.column - 1,
+                line: position.line
             },
             message
-        };
-
-        if (this.fixFunction) {
-            const fixFunction = this.fixFunction;
-            report.fix = () => {
-                fixFunction(this);
-                return this.fixes.splice(0, this.fixes.length);
-            }
-        }
-
-        this.esLintContext.report(report);
+        });
     }
 
 
