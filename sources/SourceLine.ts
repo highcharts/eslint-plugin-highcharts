@@ -60,13 +60,8 @@ export class SourceLine {
     }
 
 
-    public getLines(): Array<string> {
-        return U.breakText(this.toString());
-    }
-
-
     public getMaximalLength(): number {
-        const lines = this.getLines();
+        const lines = this.getWrappedLines();
 
         let lineLength: number,
             maximalLength = 0;
@@ -117,6 +112,11 @@ export class SourceLine {
         position.end = token.text.length;
 
         return position;
+    }
+
+
+    public getWrappedLines(): Array<string> {
+        return U.breakText(this.toString());
     }
 
 

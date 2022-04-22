@@ -146,12 +146,26 @@ function lint (
             const position = code.getLinePosition(line);
 
             if (position) {
-                console.log(position);
-                context.report(
-                    position,
-                    message + ` ${lineLength}`,
-                    createFixer(line, position, maximalLength)
-                );
+                const wrappedLines = line.getWrappedLines();
+
+                let lineIndex = 0;
+
+                for (const wrappedLine of wrappedLines) {
+                    if (wrappedLine.length > maximalLength) {
+                        context.report(
+                            {
+                                column: maximalLength + 1,
+                                end: position.end,
+                                line: position.line + lineIndex,
+                                start: position.start
+                            },
+                            message + ` ${lineLength}`,
+                            createFixer(line, position, maximalLength)
+                        );
+                    }
+
+                    ++lineIndex;
+                }
             }
         }
     }
