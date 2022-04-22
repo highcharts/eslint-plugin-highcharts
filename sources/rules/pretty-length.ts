@@ -14,12 +14,14 @@
  * */
 
 
-import * as FS from 'fs';
+import * as ESLint from 'eslint';
 import * as TS from 'typescript';
-import * as U from '../Utilities';
 import RuleContext from '../RuleContext';
 import RuleOptions from '../RuleOptions';
+import SourceComment from '../SourceComment';
+import SourceDoc from '../SourceDoc';
 import SourceLine from '../SourceLine';
+import SourcePosition from '../SourcePosition';
 
 
 /* *
@@ -71,81 +73,86 @@ const optionsSchema = {
  * */
 
 
-function fix(
-    context: PrettyLengthContext
-): void {
-    const docletASTs: Array<TS.JSDoc> = [];
+function createFixer (
+    line: SourceLine,
+    position: SourcePosition,
+    maximalLength: number
+): ESLint.Rule.ReportFixer {
+    return (): ESLint.Rule.Fix => {
+        const range: ESLint.AST.Range = [ position.start, position.end ],
+            text: Array<string> = [],
+            tokens = line.tokens;
 
-    context.sourceCode.lines.forEach(
-        sourceLine => docletASTs.push(...U.getJSDocs(sourceLine))
-    );
+        let indent: number,
+            lineText = '',
+            tokenText: string;
 
-    FS.writeFileSync(
-        context.sourceCode.fileName + '.json',
-        JSON.stringify(
-            docletASTs,
-            [
-                'name',
-                'comment',
-                'text',
-                'tags',
-                'kind',
-                'flags',
-                'modifierFlagsCache',
-                'transformFlags',
-                'end',
-                'pos',
-            ],
-            '  '
-        )
-    );
-}
+        for (const token of tokens) {
+            if (token.kind === TS.SyntaxKind.NewLineTrivia) {
+                continue;
+            }
 
+            if (
+                token instanceof SourceComment ||
+                token instanceof SourceDoc
+            ) {
+                indent = token.getIndent();
+                tokenText = token.toString(maximalLength - indent);
+                continue;
+            }
 
-function fixJSDoc(
-    context: PrettyLengthContext
-): void {
-    // @todo
+            tokenText = token.text;
+
+            if ((lineText.length + tokenText.length) > maximalLength) {
+                text.push(lineText);
+                lineText = '';
+            }
+
+            lineText += tokenText;
+        }
+
+        text.push(lineText);
+
+        return { range, text: text.join('\n') };
+    };
 }
 
 
 function lint (
     context: PrettyLengthContext
-) {
-    const sourceLines = context.sourceCode.lines,
+): void {
+    const code = context.sourceCode,
         {
             ignorePattern,
             maximalLength
         } = context.options,
-        ignoreRegExp = (ignorePattern && new RegExp(ignorePattern));
+        ignoreRegExp = (ignorePattern ? new RegExp(ignorePattern) : void 0),
+        lines = code.lines,
+        message = messageTemplate.replace('{0}', `${maximalLength}`);
 
-    console.log('Checking', context.sourceCode.fileName);
+    let lineLength: number;
 
-    for (
-        let line = 0,
-            lineEnd = sourceLines.length,
-            sourceLine: SourceLine,
-            sourceLineLength: number;
-        line < lineEnd;
-        ++line
-    ) {
-        sourceLine = sourceLines[line];
-
+    for (const line of lines) {
         if (
             ignoreRegExp &&
-            ignoreRegExp.test(sourceLine.toString())
+            ignoreRegExp.test(line.toString())
         ) {
             continue;
         }
 
-        sourceLineLength = sourceLine.getLength();
+        lineLength = line.getMaximalLength();
 
-        if (sourceLineLength > maximalLength) {
-            context.report(
-                line,
-                maximalLength - 1,
-                messageTemplate.replace('{0}', `${maximalLength}`)
-            );
+        if (lineLength > maximalLength) {
+            const position = code.getLinePosition(line);
+
+            if (position) {
+                console.log(position);
+                context.report(
+                    position,
+                    message + ` ${lineLength}`,
+                    createFixer(line, position, maximalLength)
+                );
+            }
         }
     }
 }
@@ -163,5 +170,5 @@ export = RuleContext.setupRuleExport(
     optionsSchema,
     optionsDefaults,
     lint,
-    fix
+    true
 );

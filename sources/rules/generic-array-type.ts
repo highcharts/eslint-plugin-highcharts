@@ -16,11 +16,9 @@
 
 
 import * as ESLint from 'eslint';
-import * as FS from 'fs';
 import * as TS from 'typescript';
 import RuleContext from '../RuleContext';
 import RuleOptions from '../RuleOptions';
-import SourceLine from '../SourceLine';
 import SourcePosition from '../SourcePosition';
 import SourceToken from '../SourceToken';
 
@@ -84,41 +82,33 @@ function createFixer(
 function lint (
     context: GenericArrayTypeContext
 ): void {
-    const sourceLines = context.sourceCode.lines;
+    const code = context.sourceCode,
+        lines = code.lines;
 
-    for (
-        let line = 0,
-            lineEnd = sourceLines.length,
-            sourceLine: SourceLine,
-            sourceLineTokens: Array<SourceToken>;
-        line < lineEnd;
-        ++line
-    ) {
-        sourceLine = sourceLines[line];
-        sourceLineTokens = sourceLine.tokens;
+    let tokens: Array<SourceToken>;
+
+    for (const line of lines) {
+        tokens = line.tokens;
 
         for (
             let index = 0,
-                indexEnd = sourceLineTokens.length - 2,
+                indexEnd = tokens.length - 2,
                 identifierToken: SourceToken,
                 openBracketToken: SourceToken,
                 closeBracketToken: SourceToken;
             index < indexEnd;
             ++index
         ) {
-            identifierToken = sourceLineTokens[index];
-            openBracketToken = sourceLineTokens[index+1];
-            closeBracketToken = sourceLineTokens[index+2];
+            identifierToken = tokens[index];
+            openBracketToken = tokens[index+1];
+            closeBracketToken = tokens[index+2];
 
             if (
                 identifierToken.kind === TS.SyntaxKind.Identifier &&
                 openBracketToken.kind === TS.SyntaxKind.OpenBracketToken &&
                 closeBracketToken.kind === TS.SyntaxKind.CloseBracketToken
             ) {
-                const position = sourceLine.getPosition(
-                    context.sourceCode,
-                    openBracketToken
-                );
+                const position = code.getTokenPosition(line, openBracketToken);
 
                 if (position) {
                     context.report(

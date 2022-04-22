@@ -14,8 +14,11 @@
 
 
 import * as TS from 'typescript';
+import * as U from './Utilities';
 import SourceComment from './SourceComment';
+import SourceDoc from './SourceDoc';
 import SourceLine from './SourceLine';
+import SourcePosition from './SourcePosition';
 import SourceToken from './SourceToken';
 
 
@@ -66,57 +69,83 @@ export class SourceCode {
      * */
 
 
-    public getLinePos(
-        sourceLine: SourceLine
-    ): number {
+    public getLinePosition(
+        line: SourceLine
+    ): (SourcePosition|null) {
         const lines = this.lines,
-            lineIndex = lines.indexOf(sourceLine);
+            lineIndex = lines.indexOf(line),
+            position: SourcePosition = {
+                column: 1,
+                end: 0,
+                line: 1,
+                start: 0
+            };
 
-        if (lineIndex === -1) {
-            return -1;
+        if (lineIndex < 0) {
+            return null;
         }
 
-        let pos = 0;
+        for (
+            let i = 0,
+                tokens: Array<SourceToken>,
+                tokenLength: number,
+                tokenText: string;
+            i < lineIndex;
+            ++i
+        ) {
+            tokens = lines[i].tokens;
 
-        for (let i = 0, iEnd = lineIndex; i < iEnd; ++i) {
-            pos += lines[i].getLength() + 1; // + line break
+            for (const token of tokens) {
+                tokenText = token.text;
+
+                if (
+                    token.kind === TS.SyntaxKind.JSDocComment ||
+                    token.kind === TS.SyntaxKind.MultiLineCommentTrivia
+                ) {
+                    tokenLength = U.breakText(tokenText).length;
+
+                    if (tokenLength > 2) {
+                        // count only the extra lines in-between
+                        position.line += tokenLength - 2;
+                    }
+                }
+
+                position.start += tokenText.length;
+            }
+
+            position.line += 1;
         }
 
-        return pos;
+        position.end = position.start + U.breakText(line.toString())[0].length;
+
+        return position;
     }
 
 
-    public getTokenPos(
-        sourceToken: SourceToken
-    ): number {
-        const lines = this.lines;
+    /**
+     * Returns the token position relative to the code.
+     */
+    public getTokenPosition(
+        line: SourceLine,
+        token: SourceToken
+    ): (SourcePosition|null) {
 
-        let line: SourceLine,
-            pos = 0,
-            tokenIndex = -1;
+        const linePosition = this.getLinePosition(line),
+            tokenPosition = line.getTokenPosition(token);
 
-        for (let i = 0, iEnd = lines.length; i < iEnd; ++i) {
-            line = lines[i];
-            tokenIndex = line.tokens.indexOf(sourceToken);
+        console.log(linePosition);
+        console.log(tokenPosition);
 
-            if (tokenIndex >= 0) {
-                const tokens = line.tokens;
-
-                for (let j = 0, jEnd = tokenIndex; j < jEnd; ++j) {
-                    pos += tokens[j].text.length;
-                }
-
-                break;
-            }
-
-            pos += lines[i].getLength() + 1; // + line break
+        if (!linePosition || !tokenPosition) {
+            return null;
         }
 
-        if (tokenIndex === -1) {
-            return -1;
+        return {
+            column: tokenPosition.column,
+            end: linePosition.start + tokenPosition.end,
+            line: linePosition.line + tokenPosition.line - 1,
+            start: linePosition.start + tokenPosition.start
         }
-
-        return pos;
     }
 
 
@@ -146,13 +175,12 @@ export class SourceCode {
             kind = scanner.scan();
             text = scanner.getTokenText();
 
-            if (
-                kind === TS.SyntaxKind.MultiLineCommentTrivia ||
-                kind === TS.SyntaxKind.SingleLineCommentTrivia
-            ) {
-                line.tokens.push(new SourceComment(kind, text));
-            } else {
+            if (kind !== TS.SyntaxKind.MultiLineCommentTrivia) {
                 line.tokens.push({ kind, text });
+            // } else if (SourceDoc.isDocComment(text)) {
+            //     line.tokens.push(new SourceDoc(text, Math.floor(line.getIndent() / 2)));
+            } else {
+                line.tokens.push(new SourceComment(text, Math.floor(line.getIndent() / 2)));
             }
 
             if (
@@ -178,6 +206,8 @@ export class SourceCode {
 
         return text;
     }
+
+
 }
 
 

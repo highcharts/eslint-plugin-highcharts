@@ -89,6 +89,13 @@ export type UnknownObject = Record<string, unknown>;
  * */
 
 
+export function breakText(
+    text: string
+): Array<string> {
+    return text.split(/\r\n|\r|\n/g);
+}
+
+
 export function extractTypes(
     tsSourceFile: TS.SourceFile,
     tsNode: TS.Node

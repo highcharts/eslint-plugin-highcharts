@@ -14,7 +14,7 @@
 
 
 import * as TS from 'typescript';
-import SourceCode from './SourceCode';
+import * as U from './Utilities';
 import SourcePosition from './SourcePosition';
 import SourceToken from './SourceToken';
 
@@ -49,7 +49,10 @@ export class SourceLine {
     public getIndent(): number {
         const firstToken = this.tokens[0];
 
-        if (firstToken.kind === TS.SyntaxKind.WhitespaceTrivia) {
+        if (
+            firstToken &&
+            firstToken.kind === TS.SyntaxKind.WhitespaceTrivia
+        ) {
             return firstToken.text.length;
         }
 
@@ -57,81 +60,103 @@ export class SourceLine {
     }
 
 
-    public getLength(): number {
-        const tokens = this.tokens;
-
-        let length = 0;
-
-        for (let i = 0, iEnd = tokens.length; i < iEnd; ++i) {
-            length += tokens[i].text.length;
-        }
-
-        return length;
+    public getLines(): Array<string> {
+        return U.breakText(this.toString());
     }
 
 
-    public getPosition(
-        sourceCode: SourceCode,
-        token?: SourceToken
+    public getMaximalLength(): number {
+        const lines = this.getLines();
+
+        let lineLength: number,
+            maximalLength = 0;
+
+        for (const line of lines) {
+            lineLength = line.length;
+            if (lineLength > maximalLength) {
+                maximalLength = lineLength;
+            }
+        }
+
+        return maximalLength;
+    }
+
+
+    /**
+     * Returns the token position relative to the line.
+     */
+    public getTokenPosition(
+        token: SourceToken
     ): (SourcePosition|null) {
-        const lines = sourceCode.lines,
-            lineIndex = lines.indexOf(this),
-            position: SourcePosition = {
+        const tokens = this.tokens,
+            tokenIndex = tokens.indexOf(token),
+            position = {
                 column: 1,
                 end: 0,
                 line: 1,
                 start: 0
             };
 
-        if (lineIndex === -1) {
+        if (tokenIndex < 0) {
             return null;
         }
 
-        let tokens: Array<SourceToken>;
-
-        for (let i = 0, iLast = lineIndex, match: (RegExpMatchArray|null); i <= iLast; ++i) {
-
-            position.column = 1;
-            tokens = lines[i].tokens;
-
-            for (const lineToken of tokens) {
-
-                if (i === iLast) {
-                    if (!token) {
-                        return position;
-                    } else if (lineToken === token) {
-                        position.end = position.start + lineToken.text.length;
-                        return position;
-                    }
-                }
-
-                if (lineToken.kind === TS.SyntaxKind.MultiLineCommentTrivia) {
-                    match = lineToken.text.match(/\n|\r|\r\n/g);
-
-                    if (match) {
-                        position.line += match.length;
-                    }
-                }
-
-                position.column += lineToken.text.length;
-                position.start += lineToken.text.length;
+        for (let i = 0, tokenText: string; i < tokenIndex; ++i) {
+            tokenText = tokens[i].text;
+ 
+            if (
+                token.kind === TS.SyntaxKind.JSDocComment ||
+                token.kind === TS.SyntaxKind.MultiLineCommentTrivia
+            ) {
+                position.line += U.breakText(tokenText).length - 1;
             }
 
-            position.line += 1;
+            position.start += tokenText.length;
         }
 
-        return null;
+        position.end = token.text.length;
+
+        return position;
     }
 
 
-    public toString(): string {
-        let text = '';
+    public toString(
+        maxLength?: number
+    ): string {
+        if (!maxLength) {
+            let text = '';
 
-        for (const token of this.tokens) {
-            text += token.text;
+            for (const token of this.tokens) {
+                text += token.text;
+            }
+
+            return text;
         }
 
-        return text;
+        const lines: Array<string> = [],
+            tokens = this.tokens;
+
+        if (!tokens.length) {
+            return '';
+        }
+
+        let line = '',
+            tokenText: string;
+
+        for (const token of tokens) {
+            tokenText = token.text;
+
+            if ((line + tokenText).length > maxLength) {
+                lines.push(line);
+                line = '';
+            }
+
+            line += tokenText;
+        }
+
+        lines.push(line);
+
+        return lines.join('\n');
     }
 
 
