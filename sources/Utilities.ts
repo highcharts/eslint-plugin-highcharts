@@ -92,7 +92,7 @@ export type UnknownObject = Record<string, unknown>;
 export function breakText(
     text: string
 ): Array<string> {
-    return text.split(/\r\n|\r|\n/g);
+    return text.split(/\r\n|\r|\n/gu);
 }
 
 
@@ -162,7 +162,7 @@ export function indent (
         }
     });
 
-    return (newLine ? paddedStr : paddedStr + line.trimRight() + '\n');
+    return (newLine ? paddedStr : paddedStr + line.trimRight());
 }
 
 
@@ -233,4 +233,11 @@ export function trimAll (
     }
 
     return text.replace(/\s+/gu, ' ').trim();
+}
+
+
+export function trimBreaks (
+    text: string
+): string {
+    return text.replace(/^\s+|\s+$/gu, '')
 }

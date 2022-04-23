@@ -177,8 +177,9 @@ export class SourceCode {
 
             if (kind !== TS.SyntaxKind.MultiLineCommentTrivia) {
                 line.tokens.push({ kind, text });
-            // } else if (SourceDoc.isDocComment(text)) {
-            //     line.tokens.push(new SourceDoc(text, Math.floor(line.getIndent() / 2)));
+            } else if (SourceDoc.isDocComment(text)) {
+                const doc = new SourceDoc(text, Math.floor(line.getIndent() / 2));
+                line.tokens.push(doc);
             } else {
                 line.tokens.push(new SourceComment(text, Math.floor(line.getIndent() / 2)));
             }
