@@ -175,20 +175,20 @@ export class SourceCode {
             kind = scanner.scan();
             text = scanner.getTokenText();
 
-            if (kind !== TS.SyntaxKind.MultiLineCommentTrivia) {
-                line.tokens.push({ kind, text });
-            } else if (SourceDoc.isDocComment(text)) {
-                line.tokens.push(new SourceDoc(text, Math.floor(line.getIndent() / 2)));
-            } else {
-                line.tokens.push(new SourceComment(text, Math.floor(line.getIndent() / 2)));
-            }
-
             if (
                 kind === TS.SyntaxKind.NewLineTrivia ||
                 kind === TS.SyntaxKind.EndOfFileToken
             ) {
                 lines.push(line);
                 line = new SourceLine();
+            }
+
+            if (kind !== TS.SyntaxKind.MultiLineCommentTrivia) {
+                line.tokens.push({ kind, text });
+            } else if (SourceDoc.isDocComment(text)) {
+                line.tokens.push(new SourceDoc(text, Math.floor(line.getIndent() / 2)));
+            } else {
+                line.tokens.push(new SourceComment(text, Math.floor(line.getIndent() / 2)));
             }
 
         } while (kind !== TS.SyntaxKind.EndOfFileToken)
