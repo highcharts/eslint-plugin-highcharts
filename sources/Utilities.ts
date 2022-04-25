@@ -128,24 +128,29 @@ export function extractTypes(
  */
 export function indent (
     text: string,
-    linePrefix = '',
-    wrap = 80
+    linePrefix: string,
+    wrap?: number
 ): string {
-    const fragments = text.split(/\s/gmu);
+
+    if (!wrap) {
+        return linePrefix + text.replace(/\r\n|\r|\n/gu, `$0${linePrefix}`);
+    }
+
+    const fragments = text.replace(/(?:\r\n|\r|\n){2,}/gu, ' \0 ').split(/\s/gmu);
 
     let newLine = true,
         line = '',
         paddedStr = '';
 
-    fragments.forEach(fragment => {
+    for (const fragment of fragments) {
 
-        if (!newLine && fragment === '') {
+        if (fragment === '\0') {
             paddedStr += (
                 line.trimRight() + '\n' +
                 linePrefix.trimRight() + '\n'
             );
             newLine = true;
-            return;
+            continue;
         }
 
         if (!newLine && line.length + fragment.length + 1 > wrap) {
@@ -160,13 +165,13 @@ export function indent (
         else {
             line += ' ' + fragment;
         }
-    });
+    }
 
     return (newLine ? paddedStr : paddedStr + line.trimRight());
 }
 
 
-export function isDocumentedNode<T extends TS.Node>(
+export function isDocumentedNode<T extends TS.Node> (
     node: T
 ): node is (T&DocumentedNode) {
     return (
@@ -175,7 +180,7 @@ export function isDocumentedNode<T extends TS.Node>(
 }
 
 
-export function isExpressionNode<T extends TS.Node>(
+export function isExpressionNode<T extends TS.Node> (
     node: T
 ): node is (T&ExpressionNode) {
     return (
@@ -184,7 +189,7 @@ export function isExpressionNode<T extends TS.Node>(
 }
 
 
-export function isNodeClass<T extends TS.Node>(
+export function isNodeClass<T extends TS.Node> (
     node: T,
     nodeClass: ('Assignment'|'Declaration'|'Expression'|'Signature'|'Statement')
 ): boolean {
@@ -193,7 +198,7 @@ export function isNodeClass<T extends TS.Node>(
 }
 
 
-export function isNodeStatement<T extends TS.Node>(
+export function isNodeStatement<T extends TS.Node> (
     node: T
 ): node is (T&StatementKind) {
     return (
@@ -216,6 +221,12 @@ export function isNodeStatement<T extends TS.Node>(
     );
 }
 
+
+export function removeBreaks (
+    text: string
+): string {
+    return text.replace(/[\n\r]+/gu, ' ').trim();
+}
 
 export function trimAll (
     text: string,

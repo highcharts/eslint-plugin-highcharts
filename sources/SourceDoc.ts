@@ -51,6 +51,20 @@ export class SourceDoc extends SourceLine implements SourceToken {
     }
 
 
+    private static isTagWithName<T extends TS.JSDocTag>(
+        tag: T
+    ): tag is (T&{name:TS.EntityName}) {
+        return typeof (tag as {name?:TS.EntityName}).name !== 'undefined';
+    }
+
+
+    private static isTagWithType<T extends TS.JSDocTag>(
+        tag: T
+    ): tag is (T&{typeExpression:TS.JSDocTypeExpression}) {
+        return typeof (tag as {typeExpression?:TS.JSDocTypeExpression}).typeExpression !== 'undefined';
+    }
+
+
     /* *
      *
      *  Constructor
@@ -85,45 +99,40 @@ export class SourceDoc extends SourceLine implements SourceToken {
             if (tsJSDoc.comment) {
                 tags.push({
                     kind: TS.SyntaxKind.JSDocText,
-                    tagName: 'description',
+                    tagKind: 'description',
                     text: U.trimBreaks('' + tsJSDoc.comment)
                 });
             }
 
             if (tsJSDoc.tags) {
-                let kind: TS.SyntaxKind,
-                    tagName: string,
-                    text: string;
+                let tag: SourceDocTag;
 
                 for (const tsTag of tsJSDoc.tags) {
-                    kind = tsTag.kind;
-                    tagName = tsTag.tagName.getText(tsSource);
+                    tag = {
+                        kind: tsTag.kind,
+                        tagKind: tsTag.tagName.text,
+                        text: ''
+                    };
 
                     if (tsTag.comment) {
                         if (typeof tsTag.comment === 'string') {
-                            text = tsTag.comment
+                            tag.text = tsTag.comment
                         } else {
-                            text = tsTag.comment
+                            tag.text = tsTag.comment
                                 .map(tsNode => tsNode.getText(tsSource))
                                 .join('\n');
                         }
-                    } else {
-                        text = '';
                     }
 
-                    text = U.trimBreaks(text);
-
-                    if (TS.isJSDocParameterTag(tsTag)) {
-                        tags.push({
-                            kind,
-                            paramName: tsTag.name.getText(tsSource),
-                            tagName,
-                            tagType: (tsTag.typeExpression?.type.getText(tsSource) || '*'),
-                            text
-                        });
-                    } else {
-                        tags.push({ kind, tagName, text });
+                    if (SourceDoc.isTagWithName(tsTag)) {
+                        tag.tagName = tsTag.name.getText(tsSource);
                     }
+
+                    if (SourceDoc.isTagWithType(tsTag)) {
+                        tag.tagType = tsTag.typeExpression.type.getText(tsSource)
+                    }
+                    if (tag.tagKind === 'function') console.log(tag);
+                    tags.push(tag);
                 }
             }
         }
@@ -174,7 +183,7 @@ export class SourceDoc extends SourceLine implements SourceToken {
 
         if (
             firstTag &&
-            firstTag.tagName === 'description'
+            firstTag.tagKind === 'description'
         ) {
             text.push(U.indent(firstTag.text, ' * ', maximalLength));
             tags.shift();
@@ -184,22 +193,41 @@ export class SourceDoc extends SourceLine implements SourceToken {
             }
         }
 
+        let part1: string,
+            part2: string;
+
         for (const tag of tags) {
-            if (tag.kind === TS.SyntaxKind.JSDocParameterTag) {
-                text.push(` * @${tag.tagName} {${tag.tagType}} ${tag.paramName}`);
-                if (tag.text) {
-                    text.push(U.indent(tag.text, ' * ', maximalLength));
-                }
-            } else if (tag.tagName === 'example') {
-                text.push(` * @${tag.tagName}`);
-                text.push(tag.text);
-            } else if (U.breakText(tag.text).length > 1) {
-                text.push(` * @${tag.tagName}`);
-                if (tag.text) {
-                    text.push(U.indent(tag.text, ' * ', maximalLength));
-                }
+
+            if (tag.tagKind === 'example') {
+                text.push(' * @example');
+                text.push(U.indent(tag.text, ' * '));
+                continue;
+            }
+
+            part1 = `@${tag.tagKind}`;
+            part2 = tag.text;
+
+            if (tag.tagType) {
+                part1 += ` {${tag.tagType}}`;
+            }
+
+            if (tag.tagName) {
+                part1 += ` ${tag.tagName}`;
+            }
+
+            if (
+                part2 &&
+                ! tag.tagType &&
+                ! tag.tagName &&
+                U.breakText(part2).length === 1
+            ) {
+                text.push(U.indent(`${part1} ${U.removeBreaks(part2)}`.trimRight(), ' * ', maximalLength));
             } else {
-                text.push(` * @${tag.tagName} ${tag.text}`.trimRight());
+                text.push(` * ${part1}`);
+
+                if (part2) {
+                    text.push(U.indent(part2, ' * ', maximalLength));
+                }
             }
         }
 
