@@ -46,16 +46,12 @@ export class SourceComment extends SourceLine implements SourceToken {
         this.kind = TS.SyntaxKind.MultiLineCommentTrivia;
 
         const lines = U.breakText(text),
-            lineBreak = text.includes('\r\n') ? '\r\n' : '\n',
             tokens = this.tokens;
 
         for (let i = 0, iEnd = lines.length; i < iEnd; ++i) {
             tokens.push({
                 kind: TS.SyntaxKind.SingleLineCommentTrivia,
                 text: (i ? lines[i].substr(indent) : lines[i])
-            }, {
-                kind: TS.SyntaxKind.NewLineTrivia,
-                text: lineBreak
             });
         }
     }
@@ -88,6 +84,41 @@ export class SourceComment extends SourceLine implements SourceToken {
 
     public getIndent(): number {
         return this.indent;
+    }
+
+    public toString(
+        maximalLength?: number
+    ): string {
+        const lines: Array<string> = [];
+
+        if (maximalLength) {
+            let line: string = '',
+                words: Array<string>;
+
+            for (const token of this.tokens) {
+                words = token.text.split(' ');
+
+                for (const word of words) {
+                    if ((line + word).length > maximalLength) {
+                        lines.push(line);
+
+                        if (line.match(/^\s*\*\s*/)) {
+                            line = '';
+                        }
+                    }
+
+                    line += word;
+                }
+
+                lines.push(line);
+            }
+        } else {
+            for (const token of this.tokens) {
+                lines.push(token.text);
+            }
+        }
+
+        return lines.join('\n');
     }
 
 

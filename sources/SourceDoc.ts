@@ -129,9 +129,9 @@ export class SourceDoc extends SourceLine implements SourceToken {
                     }
 
                     if (SourceDoc.isTagWithType(tsTag)) {
-                        tag.tagType = tsTag.typeExpression.type.getText(tsSource)
+                        tag.tagType = tsTag.typeExpression.getText(tsSource)
                     }
-                    if (tag.tagKind === 'function') console.log(tag);
+
                     tags.push(tag);
                 }
             }
@@ -173,6 +173,7 @@ export class SourceDoc extends SourceLine implements SourceToken {
     public toString(
         maximalLength?: number
     ): string {
+
         if (!maximalLength) {
             return this.text;
         }

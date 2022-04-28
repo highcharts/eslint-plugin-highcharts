@@ -121,9 +121,10 @@ export class SourceLine {
 
 
     public toString(
-        maxLength?: number
+        maximalLength?: number
     ): string {
-        if (!maxLength) {
+
+        if (!maximalLength) {
             let text = '';
 
             for (const token of this.tokens) {
@@ -140,13 +141,13 @@ export class SourceLine {
             return '';
         }
 
-        let line = '',
+        let line: string = '',
             tokenText: string;
 
         for (const token of tokens) {
             tokenText = token.text;
 
-            if ((line + tokenText).length > maxLength) {
+            if ((line + tokenText).length > maximalLength) {
                 lines.push(line);
                 line = '';
             }

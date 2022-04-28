@@ -181,6 +181,7 @@ export class SourceCode {
             ) {
                 lines.push(line);
                 line = new SourceLine();
+                continue;
             }
 
             if (kind !== TS.SyntaxKind.MultiLineCommentTrivia) {
