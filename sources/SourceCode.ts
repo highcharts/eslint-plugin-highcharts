@@ -104,9 +104,8 @@ export class SourceCode {
                 ) {
                     tokenLength = U.breakText(tokenText).length;
 
-                    if (tokenLength > 2) {
-                        // count only the extra lines in-between
-                        position.line += tokenLength - 2;
+                    if (tokenLength > 1) {
+                        position.line += tokenLength - 1;
                     }
                 }
 
@@ -132,9 +131,6 @@ export class SourceCode {
 
         const linePosition = this.getLinePosition(line),
             tokenPosition = line.getTokenPosition(token);
-
-        console.log(linePosition);
-        console.log(tokenPosition);
 
         if (!linePosition || !tokenPosition) {
             return null;
