@@ -113,6 +113,21 @@ export function extractTypes(
 }
 
 
+export function extractFirstLine(
+    text: string
+): string {
+    return breakText(text)[0];
+}
+
+
+export function extractLastLine(
+    text: string
+): string {
+    const lines = breakText(text);
+    return lines[lines.length-1];
+}
+
+
 /**
  * Returns a indented string, that fits into a specific width and spans over
  * several lines.
