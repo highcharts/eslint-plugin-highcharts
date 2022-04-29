@@ -161,9 +161,11 @@ export class SourceCode {
 
         const scanner = TS.createScanner(TS.ScriptTarget.Latest, false);
 
-        let kind: TS.SyntaxKind,
+        let indent: number,
+            kind: TS.SyntaxKind,
             line = new SourceLine(),
-            text: string;
+            text: string,
+            token: SourceToken;
 
         scanner.setText(sourceCode);
 
@@ -180,13 +182,19 @@ export class SourceCode {
                 continue;
             }
 
-            if (kind !== TS.SyntaxKind.MultiLineCommentTrivia) {
-                line.tokens.push({ kind, text });
-            } else if (SourceDoc.isDocComment(text)) {
-                line.tokens.push(new SourceDoc(text, Math.floor(line.getIndent() / 2)));
+            if (kind === TS.SyntaxKind.MultiLineCommentTrivia) {
+                indent = Math.floor(line.getIndent() / 2) * 2;
+
+                if (SourceDoc.isDocComment(text)) {
+                    token = new SourceDoc(text, indent);
+                } else {
+                    token = new SourceComment(text, indent);
+                }
             } else {
-                line.tokens.push(new SourceComment(text, Math.floor(line.getIndent() / 2)));
+                token = { kind, text };
             }
+
+            line.tokens.push(token);
 
         } while (kind !== TS.SyntaxKind.EndOfFileToken)
     }
