@@ -135,20 +135,23 @@ export function extractLastLine(
  * @param text
  * The string to pad.
  *
- * @param linePrefix 
+ * @param indent 
  * The prefix for each line.
  *
  * @param wrap 
  * The maximum width of the padded string.
  */
 export function indent (
+    indent: number,
+    prefix: string,
     text: string,
-    linePrefix: string,
     wrap?: number
 ): string {
 
+    prefix = pad(indent, prefix);
+
     if (!wrap) {
-        return linePrefix + text.replace(/\r\n|\r|\n/gu, `$0${linePrefix}`);
+        return text.replace(/\r\n|\r|\n/gu, `\n${prefix}`);
     }
 
     const fragments = text.replace(/(?:\r\n|\r|\n){2,}/gu, ' \0 ').split(/\s/gmu);
@@ -162,7 +165,7 @@ export function indent (
         if (fragment === '\0') {
             paddedStr += (
                 line.trimRight() + '\n' +
-                linePrefix.trimRight() + '\n'
+                prefix.trimRight() + '\n'
             );
             newLine = true;
             continue;
@@ -174,10 +177,9 @@ export function indent (
         }
 
         if (newLine) {
-            line = linePrefix + fragment;
+            line = prefix + fragment;
             newLine = false;
-        }
-        else {
+        } else {
             line += ' ' + fragment;
         }
     }
@@ -234,6 +236,15 @@ export function isNodeStatement<T extends TS.Node> (
         TS.isVariableStatement(node) ||
         TS.isWhileStatement(node)
     );
+}
+
+
+export function pad(indent: number, suffix: string = ''): string {
+    if (indent > 0) {
+        return ' '.repeat(indent) + suffix;
+    }
+
+    return suffix;
 }
 
 
