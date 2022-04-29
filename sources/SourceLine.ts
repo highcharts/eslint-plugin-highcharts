@@ -145,9 +145,17 @@ export class SourceLine {
             tokenText: string;
 
         for (const token of tokens) {
-            tokenText = token.text;
 
-            if ((line + tokenText).length > maximalLength) {
+            if (
+                token instanceof SourceLine &&
+                token.tokens.length > 1
+            ) {
+                tokenText = token.toString(maximalLength - line.length);
+            } else {
+                tokenText = token.text;
+            }
+
+            if ((U.extractLastLine(line) + U.extractFirstLine(tokenText)).length > maximalLength) {
                 lines.push(line);
                 line = '';
             }
