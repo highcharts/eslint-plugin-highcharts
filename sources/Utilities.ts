@@ -84,16 +84,22 @@ export type UnknownObject = Record<string, unknown>;
 
 /* *
  *
- *  Functions
+ *  Constants
  *
  * */
 
 
-export function breakText(
-    text: string
-): Array<string> {
-    return text.split(/\r\n|\r|\n/gu);
-}
+export const lineBreaks = /\r\n|\r|\n/gu;
+
+
+export const paragraph = new RegExp(`${lineBreaks.source}{2,}`, 'gu');
+
+
+/* *
+ *
+ *  Functions
+ *
+ * */
 
 
 export function extractTypes(
@@ -116,15 +122,22 @@ export function extractTypes(
 export function extractFirstLine(
     text: string
 ): string {
-    return breakText(text)[0];
+    return text.split(lineBreaks)[0];
 }
 
 
 export function extractLastLine(
     text: string
 ): string {
-    const lines = breakText(text);
+    const lines = text.split(lineBreaks);
     return lines[lines.length-1];
+}
+
+
+export function detectLineBreak(
+    text: string
+): (string|undefined) {
+    return text.match(new RegExp(lineBreaks.source, 'u'))?.[0]
 }
 
 
@@ -147,16 +160,17 @@ export function indent (
     text: string,
     wrap?: number
 ): string {
+    const lb = detectLineBreak(text);
 
     prefix = pad(indent, prefix);
 
     if (!wrap) {
-        return prefix + text.replace(/\r\n|\r|\n/gu, `\n${prefix}`);
+        return prefix + text.replace(lineBreaks, `${lb}${prefix}`);
     }
 
     const fragments = text
-        .replace(/(?:\r\n|\r|\n){2,}/gu, ' \x00 ') // double break
-        .replace(/(?:\r\n|\r|\n)/gu, ' \x05 ') // single break
+        .replace(paragraph, ' \x00 ') // paragraphs
+        .replace(lineBreaks, ' \x05 ') // single break
         .split(/\s/gmu);
 
     let codeBlock = false,
@@ -166,17 +180,14 @@ export function indent (
     for (const fragment of fragments) {
 
         if (fragment === '\x00') {
-            paddedStr += (
-                line.trimRight() + '\n' +
-                prefix.trimRight() + '\n'
-            );
+            paddedStr += line.trimRight() + lb + prefix.trimRight() + lb;
             line = prefix;
             continue;
         }
 
         if (fragment === '\x05') {
             if (codeBlock) {
-                paddedStr += line.trimRight() + '\n';
+                paddedStr += line.trimRight() + lb;
                 line = prefix;
             }
             continue;
@@ -185,14 +196,14 @@ export function indent (
         if (fragment.startsWith('```')) {
             codeBlock = !codeBlock;
             if (line !== prefix) {
-                paddedStr += line.trimRight() + '\n';
+                paddedStr += line.trimRight() + lb;
             }
             line = prefix + fragment;
             continue;
         }
 
         if (!codeBlock && line.length + 1 + fragment.length > wrap) {
-            paddedStr += line.trimRight() + '\n';
+            paddedStr += line.trimRight() + lb;
             line = prefix + fragment;
         } else if (line === prefix) {
             line += (fragment || ' ');
@@ -268,22 +279,21 @@ export function pad(indent: number, suffix: string = ''): string {
 export function removeBreaks (
     text: string
 ): string {
-    return text.replace(/[\n\r]+/gu, ' ').trim();
+    return text.replace(lineBreaks, ' ').trim();
 }
 
 export function trimAll (
     text: string,
     keepParagraphs = false
 ): string {
+    const lb = detectLineBreak(text) || '\n';
+
     if (keepParagraphs) {
-        const fragments = text.split(/\n\s*\n/gu),
-            trimmed: Array<string> = [];
-
-        for (let i = 0, iEnd = fragments.length; i < iEnd; ++i) {
-            trimmed.push(trimAll(fragments[i]));
-        }
-
-        return trimmed.join('\n\n');
+        return text
+            .replace(paragraph, ' \x00 ')
+            .replace(/\s+/gu, ' ')
+            .trim()
+            .replace(/ ?\x00 ?/, `${lb}${lb}`);
     }
 
     return text.replace(/\s+/gu, ' ').trim();

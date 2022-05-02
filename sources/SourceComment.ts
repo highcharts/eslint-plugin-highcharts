@@ -46,7 +46,7 @@ export class SourceComment extends SourceLine implements SourceToken {
         this.indent = indent;
         this.kind = TS.SyntaxKind.MultiLineCommentTrivia;
 
-        const lines = U.breakText(text),
+        const lines = text.split(U.lineBreaks),
             tokens = this.tokens;
 
         for (let i = 0, iEnd = lines.length; i < iEnd; ++i) {

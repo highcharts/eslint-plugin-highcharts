@@ -44,7 +44,7 @@ export class SourceCode {
         sourceCode: string
     ) {
         this.fileName = fileName;
-        this.lineBreak = sourceCode.match(/\r\n/) ? '\r\n' : '\n';
+        this.lineBreak = U.detectLineBreak(sourceCode) || '\n';
         this.lines = [];
         this.raw = sourceCode;
         this.parse(sourceCode);
@@ -110,7 +110,7 @@ export class SourceCode {
                     token.kind === TS.SyntaxKind.JSDocComment ||
                     token.kind === TS.SyntaxKind.MultiLineCommentTrivia
                 ) {
-                    tokenLength = U.breakText(tokenText).length;
+                    tokenLength = tokenText.split(U.lineBreaks).length;
 
                     if (tokenLength > 1) {
                         position.line += tokenLength - 1;

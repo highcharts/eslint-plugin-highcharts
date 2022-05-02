@@ -22,23 +22,6 @@ import SourceToken from './SourceToken';
 
 /* *
  *
- *  Declarations
- *
- * */
-
-
-interface NamedTag extends TS.JSDocTag {
-    name: TS.EntityName;
-}
-
-
-interface TypedTag extends TS.JSDocTag {
-    typeExpression: TS.JSDocTypeExpression;
-}
-
-
-/* *
- *
  *  Class
  *
  * */
@@ -56,42 +39,29 @@ export class SourceDoc extends SourceLine implements SourceToken {
 
     private static decorateTag(
         tag: SourceDocTag,
-        tsSource: TS.SourceFile,
-        tsNode: (TS.JSDoc|TS.JSDocTag)
+        lineBreak: string
     ): SourceDocTag {
 
-        if (tsNode.comment) {
-            if (typeof tsNode.comment === 'string') {
-                tag.text = tsNode.comment
-            } else {
-                tag.text = tsNode.comment
-                    .map(tsComment => tsComment.getText(tsSource))
-                    .join('\n');
+        const match = tag.text.match(
+            /^@(\w+)( +\{[\w.()<>]+\})?( +[^\[\]\s]+|\[[^\[\]\s]+\])?(.*)$/su
+        );
+
+        if (match) {
+            tag.text = match[4] || '';
+
+            if (match[1]) {
+                tag.tagKind = match[1];
+            }
+            if (match[2]) {
+                tag.tagType = match[2]
+            }
+            if (match[3]) {
+                tag.tagName = match[3]
             }
         }
 
-        if (typeof (tsNode as NamedTag).name !== 'undefined') {
-            tag.tagName = (tsNode as NamedTag).name.getText(tsSource);
-        } else {
-            const match = tag.text.match(
-                /^{[\w.()<>]+} +([^\[\]\s]+|\[[^\[\]\s]+\])(?:\r\n|\r|\n)/
-            );
-
-            if (match) {
-                tag.tagName = match[1];
-                tag.text = tag.text.substr(match[0].length);
-            }
-        }
-
-        if (typeof (tsNode as TypedTag).typeExpression !== 'undefined') {
-            tag.tagType = (tsNode as TypedTag).typeExpression.getText(tsSource);
-        } else {
-            const match = tag.text.match(/^({[\w.()<>]+}) /);
-
-            if (match) {
-                tag.tagType = match[1];
-                tag.text = tag.text.substr(match[0].length);
-            }
+        if (tag.text.startsWith(lineBreak)) {
+            tag.text = tag.text.substr(lineBreak.length);
         }
 
         return tag;
@@ -102,13 +72,6 @@ export class SourceDoc extends SourceLine implements SourceToken {
         text: string
     ): boolean {
         return /^\/\*\*\s/.test(text);
-    }
-
-
-    private static isNodeWithJSDoc<T extends TS.Node>(
-        tsNode: T
-    ): tsNode is (T&{jsDoc:Array<TS.JSDoc>}) {
-        return typeof (tsNode as {jsDoc?:TS.JSDoc}).jsDoc !== 'undefined';
     }
 
 
@@ -132,45 +95,48 @@ export class SourceDoc extends SourceLine implements SourceToken {
         this.tokens = [];
 
         const tags = this.tokens,
-            tsSource = TS.createSourceFile('', text, TS.ScriptTarget.Latest, void 0, TS.ScriptKind.JS),
-            tsJSDocs: Array<TS.JSDoc> = [],
-            tsChildren = tsSource.getChildren(tsSource);
+            lines = text
+                .substr(3, text.length - 5)
+                .split(U.lineBreaks)
+                .slice(1, -1);
 
-        let tag: SourceDocTag;
+        let line: string,
+            tag: SourceDocTag = {
+                kind: TS.SyntaxKind.JSDocTag,
+                tagKind: 'description',
+                text: ''
+            };
 
-        for (const tsChild of tsChildren) {
-            if (SourceDoc.isNodeWithJSDoc(tsChild)) {
-                tsJSDocs.push(...tsChild.jsDoc);
+        tags.push(tag);
+
+        for (let i = 0, iEnd = lines.length; i < iEnd; ++i) {
+            line = lines[i].substr(indent).replace(/^ \* ?/gu, '');
+
+            if (!line && tags.length > 1) {
+                tags.push({
+                    kind: TS.SyntaxKind.WhitespaceTrivia,
+                    tagKind: '',
+                    text: ''
+                });
+            } else if (line.startsWith('@')) {
+                if (!i) {
+                    tags.pop(); // remove empty description
+                }
+
+                tag = {
+                    kind: TS.SyntaxKind.JSDocTag,
+                    tagKind: '',
+                    text: line
+                };
+
+                tags.push(tag);
+            } else {
+                tag.text += lineBreak + line;
             }
         }
 
-        for (const tsJSDoc of tsJSDocs) {
-
-            if (tsJSDoc.comment) {
-                tag = {
-                    kind: TS.SyntaxKind.JSDocText,
-                    tagKind: 'description',
-                    text: ''
-                };
-
-                SourceDoc.decorateTag(tag, tsSource, tsJSDoc);
-
-                tags.push(tag);
-            }
-
-            if (tsJSDoc.tags) {
-                for (const tsTag of tsJSDoc.tags) {
-                    tag = {
-                        kind: tsTag.kind,
-                        tagKind: tsTag.tagName.text,
-                        text: ''
-                    };
-
-                    SourceDoc.decorateTag(tag, tsSource, tsTag);
-
-                    tags.push(tag);
-                }
-            }
+        for (const tag of tags) {
+            SourceDoc.decorateTag(tag, lineBreak);
         }
     }
 
@@ -230,13 +196,14 @@ export class SourceDoc extends SourceLine implements SourceToken {
 
             lines.push(U.indent(indent, ' * ', part2, maximalLength));
             tags.shift();
-
-            if (tags.length) {
-                lines.push(U.pad(indent, ' *'));
-            }
         }
 
         for (const tag of tags) {
+
+            if (tag.tagKind === '') {
+                lines.push(U.pad(indent, ' *'));
+                continue;
+            }
 
             part1 = `@${tag.tagKind}`;
             part2 = U.trimBreaks(tag.text);
@@ -259,7 +226,7 @@ export class SourceDoc extends SourceLine implements SourceToken {
                 part2 &&
                 ! tag.tagType &&
                 ! tag.tagName &&
-                U.breakText(tag.text).length === 1
+                tag.text.split(U.lineBreaks).length === 1
             ) {
                 lines.push(U.indent(
                     indent,
