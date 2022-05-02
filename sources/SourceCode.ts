@@ -185,7 +185,7 @@ export class SourceCode {
             if (kind === TS.SyntaxKind.MultiLineCommentTrivia) {
                 indent = Math.floor(line.getIndent() / 2) * 2;
 
-                if (SourceDoc.isDocComment(text)) {
+                if (SourceDoc.isSourceDoc(text)) {
                     token = new SourceDoc(text, indent);
                 } else {
                     token = new SourceComment(text, indent);

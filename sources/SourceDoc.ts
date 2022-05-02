@@ -14,10 +14,27 @@
 
 
 import * as TS from 'typescript';
+import * as U from './Utilities';
 import SourceDocTag from './SourceDocTag';
 import SourceLine from './SourceLine';
 import SourceToken from './SourceToken';
-import * as U from './Utilities';
+
+
+/* *
+ *
+ *  Declarations
+ *
+ * */
+
+
+interface NamedTag extends TS.JSDocTag {
+    name: TS.EntityName;
+}
+
+
+interface TypedTag extends TS.JSDocTag {
+    typeExpression: TS.JSDocTypeExpression;
+}
 
 
 /* *
@@ -37,7 +54,49 @@ export class SourceDoc extends SourceLine implements SourceToken {
      * */
 
 
-    public static isDocComment(
+    private static decorateTag(
+        tag: SourceDocTag,
+        tsSource: TS.SourceFile,
+        tsNode: (TS.JSDoc|TS.JSDocTag)
+    ): SourceDocTag {
+
+        if (tsNode.comment) {
+            if (typeof tsNode.comment === 'string') {
+                tag.text = tsNode.comment
+            } else {
+                tag.text = tsNode.comment
+                    .map(tsComment => tsComment.getText(tsSource))
+                    .join('\n');
+            }
+        }
+
+        if (typeof (tsNode as NamedTag).name !== 'undefined') {
+            tag.tagName = (tsNode as NamedTag).name.getText(tsSource);
+        } else {
+            const match = tag.text.match(/^{[\w.()<>]+} +([^\[\]\s]+|\[[^\[\]\s]+\])(?:\r\n|\r|\n)/);
+
+            if (match) {
+                tag.tagName = match[1];
+                tag.text = tag.text.substr(match[0].length);
+            }
+        }
+
+        if (typeof (tsNode as TypedTag).typeExpression !== 'undefined') {
+            tag.tagType = (tsNode as TypedTag).typeExpression.getText(tsSource);
+        } else {
+            const match = tag.text.match(/^({[\w.()<>]+}) /);
+
+            if (match) {
+                tag.tagType = match[1];
+                tag.text = tag.text.substr(match[0].length);
+            }
+        }
+
+        return tag;
+    }
+
+
+    public static isSourceDoc(
         text: string
     ): boolean {
         return /^\/\*\*\s/.test(text);
@@ -45,23 +104,9 @@ export class SourceDoc extends SourceLine implements SourceToken {
 
 
     private static isNodeWithJSDoc<T extends TS.Node>(
-        node: T
-    ): node is (T&{jsDoc:Array<TS.JSDoc>}) {
-        return typeof (node as {jsDoc?:TS.JSDoc}).jsDoc !== 'undefined';
-    }
-
-
-    private static isTagWithName<T extends TS.JSDocTag>(
-        tag: T
-    ): tag is (T&{name:TS.EntityName}) {
-        return typeof (tag as {name?:TS.EntityName}).name !== 'undefined';
-    }
-
-
-    private static isTagWithType<T extends TS.JSDocTag>(
-        tag: T
-    ): tag is (T&{typeExpression:TS.JSDocTypeExpression}) {
-        return typeof (tag as {typeExpression?:TS.JSDocTypeExpression}).typeExpression !== 'undefined';
+        tsNode: T
+    ): tsNode is (T&{jsDoc:Array<TS.JSDoc>}) {
+        return typeof (tsNode as {jsDoc?:TS.JSDoc}).jsDoc !== 'undefined';
     }
 
 
@@ -88,6 +133,8 @@ export class SourceDoc extends SourceLine implements SourceToken {
             tsJSDocs: Array<TS.JSDoc> = [],
             tsChildren = tsSource.getChildren(tsSource);
 
+        let tag: SourceDocTag;
+
         for (const tsChild of tsChildren) {
             if (SourceDoc.isNodeWithJSDoc(tsChild)) {
                 tsJSDocs.push(...tsChild.jsDoc);
@@ -97,16 +144,18 @@ export class SourceDoc extends SourceLine implements SourceToken {
         for (const tsJSDoc of tsJSDocs) {
 
             if (tsJSDoc.comment) {
-                tags.push({
+                tag = {
                     kind: TS.SyntaxKind.JSDocText,
                     tagKind: 'description',
-                    text: U.trimBreaks('' + tsJSDoc.comment)
-                });
+                    text: ''
+                };
+
+                SourceDoc.decorateTag(tag, tsSource, tsJSDoc);
+
+                tags.push(tag);
             }
 
             if (tsJSDoc.tags) {
-                let tag: SourceDocTag;
-
                 for (const tsTag of tsJSDoc.tags) {
                     tag = {
                         kind: tsTag.kind,
@@ -114,23 +163,7 @@ export class SourceDoc extends SourceLine implements SourceToken {
                         text: ''
                     };
 
-                    if (tsTag.comment) {
-                        if (typeof tsTag.comment === 'string') {
-                            tag.text = tsTag.comment
-                        } else {
-                            tag.text = tsTag.comment
-                                .map(tsNode => tsNode.getText(tsSource))
-                                .join('\n');
-                        }
-                    }
-
-                    if (SourceDoc.isTagWithName(tsTag)) {
-                        tag.tagName = tsTag.name.getText(tsSource);
-                    }
-
-                    if (SourceDoc.isTagWithType(tsTag)) {
-                        tag.tagType = tsTag.typeExpression.getText(tsSource)
-                    }
+                    SourceDoc.decorateTag(tag, tsSource, tsTag);
 
                     tags.push(tag);
                 }
@@ -178,19 +211,20 @@ export class SourceDoc extends SourceLine implements SourceToken {
             return this.text;
         }
 
-        const tags = this.tokens,
+        const indent = this.indent,
+            tags = this.tokens,
             firstTag = tags[0],
-            text: Array<string> = [];
+            text: Array<string> = ['/**'];
 
         if (
             firstTag &&
             firstTag.tagKind === 'description'
         ) {
-            text.push(U.indent(firstTag.text, ' * ', maximalLength));
+            text.push(U.indent(indent, ' * ', firstTag.text, maximalLength));
             tags.shift();
 
             if (tags.length) {
-                text.push(' *');
+                text.push(U.pad(indent, ' *'));
             }
         }
 
@@ -200,16 +234,19 @@ export class SourceDoc extends SourceLine implements SourceToken {
         for (const tag of tags) {
 
             if (tag.tagKind === 'example') {
-                text.push(' * @example');
-                text.push(U.indent(tag.text, ' * '));
+                text.push(U.pad(indent, ' * @example'));
+                text.push(U.indent(indent, ' * ', tag.text));
                 continue;
+            }
+            if (tag.tagKind === 'sample') {
+                console.log(tag);
             }
 
             part1 = `@${tag.tagKind}`;
             part2 = tag.text;
 
             if (tag.tagType) {
-                part1 += ` {${tag.tagType}}`;
+                part1 += ` ${tag.tagType}`;
             }
 
             if (tag.tagName) {
@@ -222,17 +259,23 @@ export class SourceDoc extends SourceLine implements SourceToken {
                 ! tag.tagName &&
                 U.breakText(part2).length === 1
             ) {
-                text.push(U.indent(`${part1} ${U.removeBreaks(part2)}`.trimRight(), ' * ', maximalLength));
+                text.push(U.indent(
+                    indent,
+                    ' * ',
+                    `${part1} ${U.removeBreaks(part2)}`.trimRight(),
+                    maximalLength
+                ));
             } else {
-                text.push(` * ${part1}`);
+                text.push(U.pad(indent, ` * ${part1}`));
 
                 if (part2) {
-                    text.push(U.indent(part2, ' * ', maximalLength));
+                    text.push(U.indent(indent, ' * ', part2, maximalLength));
                 }
             }
         }
 
-        return `/**\n${text.join('\n')}\n */`;
+        text.push(U.pad(indent, ' */'));
+        return text.join('\n');
     }
 
 
