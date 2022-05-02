@@ -121,9 +121,10 @@ export class SourceDoc extends SourceLine implements SourceToken {
 
     public constructor (
         text: string,
+        lineBreak: string = '\n',
         indent: number = 0
     ) {
-        super();
+        super(lineBreak);
 
         this.kind = TS.SyntaxKind.JSDocComment;
         this.indent = indent;
@@ -277,7 +278,7 @@ export class SourceDoc extends SourceLine implements SourceToken {
 
         lines.push(U.pad(indent, ' */'));
 
-        return lines.join('\n');
+        return lines.join(this.lineBreak);
     }
 
 

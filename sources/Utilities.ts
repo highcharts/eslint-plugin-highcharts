@@ -191,7 +191,7 @@ export function indent (
             continue;
         }
 
-        if (!codeBlock && line.length + fragment.length + 1 > wrap) {
+        if (!codeBlock && line.length + 1 + fragment.length > wrap) {
             paddedStr += line.trimRight() + '\n';
             line = prefix + fragment;
         } else if (line === prefix) {

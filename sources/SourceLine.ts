@@ -31,12 +31,30 @@ export class SourceLine {
 
     /* *
      *
+     *  Constructor
+     *
+     * */
+
+
+    public constructor(
+        lineBreak: string = '\n'
+    ) {
+        this.lineBreak = lineBreak;
+        this.tokens = [];
+    }
+
+
+    /* *
+     *
      *  Properties
      *
      * */
 
 
-    public readonly tokens: Array<SourceToken> = [];
+    public readonly lineBreak: string;
+
+
+    public readonly tokens: Array<SourceToken>;
 
 
     /* *
@@ -123,49 +141,48 @@ export class SourceLine {
     public toString(
         maximalLength?: number
     ): string {
-
-        if (!maximalLength) {
-            let text = '';
-
-            for (const token of this.tokens) {
-                text += token.text;
-            }
-
-            return text;
-        }
-
         const lines: Array<string> = [],
             tokens = this.tokens;
 
+        let line: string = '';
+
         if (!tokens.length) {
-            return '';
+            return line;
         }
 
-        let line: string = '',
-            tokenText: string;
+        if (maximalLength) {
+            let tokenText: string;
 
-        for (const token of tokens) {
+            for (const token of tokens) {
 
-            if (
-                token instanceof SourceLine &&
-                token.tokens.length > 1
-            ) {
-                tokenText = token.toString(maximalLength - line.length);
-            } else {
-                tokenText = token.text;
+                if (
+                    token instanceof SourceLine &&
+                    token.tokens.length > 1
+                ) {
+                    tokenText = token.toString(maximalLength);
+                } else {
+                    tokenText = token.text;
+                }
+
+                if ((U.extractLastLine(line) + U.extractFirstLine(tokenText)).length > maximalLength) {
+                    lines.push(line);
+                    line = '';
+                }
+
+                line += tokenText;
             }
 
-            if ((U.extractLastLine(line) + U.extractFirstLine(tokenText)).length > maximalLength) {
-                lines.push(line);
-                line = '';
+            lines.push(line);
+        } else {
+
+            for (const token of tokens) {
+                line += token.text;
             }
 
-            line += tokenText;
+            lines.push(line);
         }
 
-        lines.push(line);
-
-        return lines.join('\n');
+        return lines.join(this.lineBreak);
     }
 
 

@@ -161,7 +161,7 @@ export class RuleContext<T extends RuleOptions = RuleOptions> {
         message: string,
         fix?: ESLint.Rule.ReportFixer
     ): void {
-        this.esLintContext.report( {
+        this.esLintContext.report({
             fix,
             loc: {
                 // ESLint needs column zero-based:

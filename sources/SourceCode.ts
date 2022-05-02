@@ -44,7 +44,9 @@ export class SourceCode {
         sourceCode: string
     ) {
         this.fileName = fileName;
+        this.lineBreak = sourceCode.match(/\r\n/) ? '\r\n' : '\n';
         this.lines = [];
+        this.raw = sourceCode;
         this.parse(sourceCode);
     }
 
@@ -59,7 +61,13 @@ export class SourceCode {
     public readonly fileName: string;
 
 
+    public readonly lineBreak: string;
+
+
     public readonly lines: Array<SourceLine>;
+
+
+    public readonly raw: string;
 
 
     /* *
@@ -113,9 +121,10 @@ export class SourceCode {
             }
 
             position.line += 1;
+            position.start += 1; // line break
         }
 
-        position.end = position.start + U.breakText(line.toString())[0].length;
+        position.end = position.start + line.toString().length;
 
         return position;
     }
@@ -141,7 +150,7 @@ export class SourceCode {
             end: linePosition.start + tokenPosition.end,
             line: linePosition.line + tokenPosition.line - 1,
             start: linePosition.start + tokenPosition.start
-        }
+        };
     }
 
 
@@ -149,7 +158,8 @@ export class SourceCode {
         sourceCode: string,
         replace = false
     ) {
-        const lines = this.lines;
+        const lineBreak = this.lineBreak,
+            lines = this.lines;
 
         if (replace) {
             lines.length = 0;
@@ -163,7 +173,7 @@ export class SourceCode {
 
         let indent: number,
             kind: TS.SyntaxKind,
-            line = new SourceLine(),
+            line = new SourceLine(lineBreak),
             text: string,
             token: SourceToken;
 
@@ -178,7 +188,7 @@ export class SourceCode {
                 kind === TS.SyntaxKind.EndOfFileToken
             ) {
                 lines.push(line);
-                line = new SourceLine();
+                line = new SourceLine(lineBreak);
                 continue;
             }
 
@@ -186,9 +196,9 @@ export class SourceCode {
                 indent = Math.floor(line.getIndent() / 2) * 2;
 
                 if (SourceDoc.isSourceDoc(text)) {
-                    token = new SourceDoc(text, indent);
+                    token = new SourceDoc(text, lineBreak, indent);
                 } else {
-                    token = new SourceComment(text, indent);
+                    token = new SourceComment(text, lineBreak, indent);
                 }
             } else {
                 token = { kind, text };
@@ -200,16 +210,17 @@ export class SourceCode {
     }
 
 
-    public toString (): string {
-        const lines = this.lines;
+    public toString (
+        maximalLength?: number
+    ): string {
+        const lines = this.lines,
+            strings: Array<string> = [];
 
-        let text = '';
-
-        for (let i = 0, iEnd = lines.length; i < iEnd; ++i) {
-            text += lines[i].toString();
+        for (const line of lines) {
+            strings.push(line.toString(maximalLength));
         }
 
-        return text;
+        return strings.join(this.lineBreak);
     }
 
 

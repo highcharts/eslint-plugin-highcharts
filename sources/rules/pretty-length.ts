@@ -15,13 +15,8 @@
 
 
 import * as ESLint from 'eslint';
-import * as TS from 'typescript';
 import RuleContext from '../RuleContext';
 import RuleOptions from '../RuleOptions';
-import SourceComment from '../SourceComment';
-import SourceDoc from '../SourceDoc';
-import SourceLine from '../SourceLine';
-import SourcePosition from '../SourcePosition';
 
 
 /* *
@@ -74,46 +69,32 @@ const optionsSchema = {
 
 
 function createFixer (
-    line: SourceLine,
-    position: SourcePosition,
-    maximalLength: number
+    context: PrettyLengthContext
 ): ESLint.Rule.ReportFixer {
     return (): ESLint.Rule.Fix => {
-        const range: ESLint.AST.Range = [ position.start, position.end ],
-            text: Array<string> = [],
-            tokens = line.tokens;
+        const code = context.sourceCode,
+            fix: Array<string> = [],
+            range: ESLint.AST.Range = [ 0, code.raw.length ],
+            lines = code.lines,
+            {
+                ignorePattern,
+                maximalLength
+            } = context.options,
+            ignoreRegExp = (ignorePattern ? new RegExp(ignorePattern) : void 0);
 
-        let indent: number,
-            lineText = '',
-            tokenText: string;
-
-        for (const token of tokens) {
-            if (token.kind === TS.SyntaxKind.NewLineTrivia) {
-                continue;
-            }
+        for (const l of lines) {
 
             if (
-                token instanceof SourceComment ||
-                token instanceof SourceDoc
+                ignoreRegExp &&
+                ignoreRegExp.test(l.toString())
             ) {
-                indent = token.getIndent();
-                tokenText = token.toString(maximalLength - indent);
                 continue;
             }
 
-            tokenText = token.text;
-
-            if ((lineText.length + tokenText.length) > maximalLength) {
-                text.push(lineText);
-                lineText = '';
-            }
-
-            lineText += tokenText;
+            fix.push(l.toString(maximalLength));
         }
 
-        text.push(lineText);
-
-        return { range, text: text.join('\n') };
+        return { range, text: fix.join(code.lineBreak) };
     };
 }
 
@@ -130,9 +111,10 @@ function lint (
         lines = code.lines,
         message = messageTemplate.replace('{0}', `${maximalLength}`);
 
-    let lineLength: number;
+    let maximalLineLength: number;
 
     for (const line of lines) {
+
         if (
             ignoreRegExp &&
             ignoreRegExp.test(line.toString())
@@ -140,9 +122,9 @@ function lint (
             continue;
         }
 
-        lineLength = line.getMaximalLength();
+        maximalLineLength = line.getMaximalLength();
 
-        if (lineLength > maximalLength) {
+        if (maximalLineLength > maximalLength) {
             const position = code.getLinePosition(line);
 
             if (position) {
@@ -151,7 +133,11 @@ function lint (
                 let lineIndex = 0;
 
                 for (const wrappedLine of wrappedLines) {
-                    if (wrappedLine.length > maximalLength) {
+
+                    if (
+                        wrappedLine.length > maximalLength &&
+                        wrappedLine.split(/\s+/g).length > 1
+                    ) {
                         context.report(
                             {
                                 column: maximalLength + 1,
@@ -159,8 +145,8 @@ function lint (
                                 line: position.line + lineIndex,
                                 start: position.start
                             },
-                            message + ` ${lineLength}`,
-                            createFixer(line, position, maximalLength)
+                            message + ` ${maximalLineLength}`,
+                            createFixer(context)
                         );
                     }
 

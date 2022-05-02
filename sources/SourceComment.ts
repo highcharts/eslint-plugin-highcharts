@@ -38,9 +38,10 @@ export class SourceComment extends SourceLine implements SourceToken {
 
     public constructor (
         text: string,
+        lineBreak: string = '\n',
         indent: number = 0
     ) {
-        super();
+        super(lineBreak);
 
         this.indent = indent;
         this.kind = TS.SyntaxKind.MultiLineCommentTrivia;
@@ -104,7 +105,7 @@ export class SourceComment extends SourceLine implements SourceToken {
 
                 for (const word of words) {
 
-                    if ((line + word).length > maximalLength) {
+                    if (line.length + 1 + word.length > maximalLength) {
                         lines.push(line.trimRight());
 
                         match = line.match(/^\s*\*+\s*/);
@@ -127,7 +128,7 @@ export class SourceComment extends SourceLine implements SourceToken {
             }
         }
 
-        return lines.join('\n');
+        return lines.join(this.lineBreak);
     }
 
 
