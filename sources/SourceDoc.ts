@@ -73,7 +73,9 @@ export class SourceDoc extends SourceLine implements SourceToken {
         if (typeof (tsNode as NamedTag).name !== 'undefined') {
             tag.tagName = (tsNode as NamedTag).name.getText(tsSource);
         } else {
-            const match = tag.text.match(/^{[\w.()<>]+} +([^\[\]\s]+|\[[^\[\]\s]+\])(?:\r\n|\r|\n)/);
+            const match = tag.text.match(
+                /^{[\w.()<>]+} +([^\[\]\s]+|\[[^\[\]\s]+\])(?:\r\n|\r|\n)/
+            );
 
             if (match) {
                 tag.tagName = match[1];
@@ -214,36 +216,35 @@ export class SourceDoc extends SourceLine implements SourceToken {
         const indent = this.indent,
             tags = this.tokens,
             firstTag = tags[0],
-            text: Array<string> = ['/**'];
+            lines: Array<string> = ['/**'];
+
+        let part1: string,
+            part2: string;
 
         if (
             firstTag &&
             firstTag.tagKind === 'description'
         ) {
-            text.push(U.indent(indent, ' * ', firstTag.text, maximalLength));
+            part2 = U.trimBreaks(firstTag.text);
+
+            lines.push(U.indent(indent, ' * ', part2, maximalLength));
             tags.shift();
 
             if (tags.length) {
-                text.push(U.pad(indent, ' *'));
+                lines.push(U.pad(indent, ' *'));
             }
         }
 
-        let part1: string,
-            part2: string;
-
         for (const tag of tags) {
 
+            part1 = `@${tag.tagKind}`;
+            part2 = U.trimBreaks(tag.text);
+
             if (tag.tagKind === 'example') {
-                text.push(U.pad(indent, ' * @example'));
-                text.push(U.indent(indent, ' * ', tag.text));
+                lines.push(U.pad(indent, ` * ${part1}`));
+                lines.push(U.indent(indent, ' * ', part2));
                 continue;
             }
-            if (tag.tagKind === 'sample') {
-                console.log(tag);
-            }
-
-            part1 = `@${tag.tagKind}`;
-            part2 = tag.text;
 
             if (tag.tagType) {
                 part1 += ` ${tag.tagType}`;
@@ -257,25 +258,26 @@ export class SourceDoc extends SourceLine implements SourceToken {
                 part2 &&
                 ! tag.tagType &&
                 ! tag.tagName &&
-                U.breakText(part2).length === 1
+                U.breakText(tag.text).length === 1
             ) {
-                text.push(U.indent(
+                lines.push(U.indent(
                     indent,
                     ' * ',
-                    `${part1} ${U.removeBreaks(part2)}`.trimRight(),
+                    `${part1} ${part2}`.trimRight(),
                     maximalLength
                 ));
             } else {
-                text.push(U.pad(indent, ` * ${part1}`));
+                lines.push(U.pad(indent, ` * ${part1}`));
 
                 if (part2) {
-                    text.push(U.indent(indent, ' * ', part2, maximalLength));
+                    lines.push(U.indent(indent, ' * ', part2, maximalLength));
                 }
             }
         }
 
-        text.push(U.pad(indent, ' */'));
-        return text.join('\n');
+        lines.push(U.pad(indent, ' */'));
+
+        return lines.join('\n');
     }
 
 

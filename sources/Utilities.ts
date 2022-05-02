@@ -154,37 +154,54 @@ export function indent (
         return prefix + text.replace(/\r\n|\r|\n/gu, `\n${prefix}`);
     }
 
-    const fragments = text.replace(/(?:\r\n|\r|\n){2,}/gu, ' \0 ').split(/\s/gmu);
+    const fragments = text
+        .replace(/(?:\r\n|\r|\n){2,}/gu, ' \x00 ') // double break
+        .replace(/(?:\r\n|\r|\n)/gu, ' \x05 ') // single break
+        .split(/\s/gmu);
 
-    let newLine = true,
-        line = '',
+    let codeBlock = false,
+        line = prefix,
         paddedStr = '';
 
     for (const fragment of fragments) {
 
-        if (fragment === '\0') {
+        if (fragment === '\x00') {
             paddedStr += (
                 line.trimRight() + '\n' +
                 prefix.trimRight() + '\n'
             );
-            newLine = true;
+            line = prefix;
             continue;
         }
 
-        if (!newLine && line.length + fragment.length + 1 > wrap) {
-            paddedStr += line.trimRight() + '\n';
-            newLine = true;
+        if (fragment === '\x05') {
+            if (codeBlock) {
+                paddedStr += line.trimRight() + '\n';
+                line = prefix;
+            }
+            continue;
         }
 
-        if (newLine) {
+        if (fragment.startsWith('```')) {
+            codeBlock = !codeBlock;
+            if (line !== prefix) {
+                paddedStr += line.trimRight() + '\n';
+            }
             line = prefix + fragment;
-            newLine = false;
+            continue;
+        }
+
+        if (!codeBlock && line.length + fragment.length + 1 > wrap) {
+            paddedStr += line.trimRight() + '\n';
+            line = prefix + fragment;
+        } else if (line === prefix) {
+            line += (fragment || ' ');
         } else {
             line += ' ' + fragment;
         }
     }
 
-    return (newLine ? paddedStr : paddedStr + line.trimRight());
+    return (line === prefix ? paddedStr : paddedStr + line.trimRight());
 }
 
 
