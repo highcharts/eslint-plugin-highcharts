@@ -151,7 +151,7 @@ export function indent (
     prefix = pad(indent, prefix);
 
     if (!wrap) {
-        return text.replace(/\r\n|\r|\n/gu, `\n${prefix}`);
+        return prefix + text.replace(/\r\n|\r|\n/gu, `\n${prefix}`);
     }
 
     const fragments = text.replace(/(?:\r\n|\r|\n){2,}/gu, ' \0 ').split(/\s/gmu);
