@@ -121,7 +121,7 @@ export class SourceLine {
                 token.kind === TS.SyntaxKind.JSDocComment ||
                 token.kind === TS.SyntaxKind.MultiLineCommentTrivia
             ) {
-                position.line += tokenText.split(U.lineBreaks).length - 1;
+                position.line += tokenText.split(U.LINE_BREAKS).length - 1;
             }
 
             position.start += tokenText.length;
@@ -134,7 +134,7 @@ export class SourceLine {
 
 
     public getWrappedLines(): Array<string> {
-        return this.toString().split(U.lineBreaks);
+        return this.toString().split(U.LINE_BREAKS);
     }
 
 

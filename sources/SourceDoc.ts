@@ -38,30 +38,57 @@ export class SourceDoc extends SourceLine implements SourceToken {
 
 
     private static decorateTag(
-        tag: SourceDocTag,
-        lineBreak: string
+        tag: SourceDocTag
     ): SourceDocTag {
 
         const match = tag.text.match(
-            /^@(\w+)( +\{[\w.()<>]+\})?( +[^\[\]\s]+|\[[^\[\]\s]+\])?(.*)$/su
+            /^@(\w+)(\s+\{[\w.()<>]+\})?(\s+[^\[\]\s]+|\[[^\[\]\s]+\])?(.*)$/su
         );
 
         if (match) {
-            tag.text = match[4] || '';
+            const {
+                1: tagKind,
+                4: tagText
+            } = match;
 
-            if (match[1]) {
-                tag.tagKind = match[1];
-            }
-            if (match[2]) {
-                tag.tagType = match[2]
-            }
-            if (match[3]) {
-                tag.tagName = match[3]
-            }
-        }
+            let {
+                2: tagType,
+                3: tagName
+            } = match;
 
-        if (tag.text.startsWith(lineBreak)) {
-            tag.text = tag.text.substr(lineBreak.length);
+            if (tagText[0] === ' ') {
+                tag.text = tagText.substr(1);
+            } else {
+                tag.text = tagText;
+            }
+
+            if (tagName) {
+                tagName = tagName.replace(/^ /u, '');
+
+                if (tag.tagName) {
+                    tag.text = `${tagName} ${tag.text}`;
+                } else {
+                    tag.tagName = tagName;
+                }
+            }
+
+            if (tagType) {
+                tagType = tagType.replace(/^ /u, '');
+
+                if (tag.tagType) {
+                    tag.text = `${tagType} ${tag.text}`;
+                } else {
+                    tag.tagType = tagType;
+                }
+            }
+
+            if (tagKind) {
+                if (tag.tagKind) {
+                    tag.text = `${tagKind} ${tag.text}`;
+                } else {
+                    tag.tagKind = tagKind;
+                }
+            }
         }
 
         return tag;
@@ -72,6 +99,27 @@ export class SourceDoc extends SourceLine implements SourceToken {
         text: string
     ): boolean {
         return /^\/\*\*\s/.test(text);
+    }
+
+
+    public static extractCommentLines(
+        text: string
+    ): Array<string> {
+        let lines = text.split(U.LINE_BREAKS);
+
+        if (lines.length === 1) {
+            // remove /** and */
+            return [ text.substr(4, text.length - 7) ];
+        }
+
+        // remove /**\n and \n*/
+        lines = lines.slice(1, -1);
+
+        for (let i = 0, iEnd = lines.length; i < iEnd; ++i) {
+            lines[i] = lines[i].replace(/^\s+\*\s?/u, '');
+        }
+
+        return lines;
     }
 
 
@@ -95,32 +143,50 @@ export class SourceDoc extends SourceLine implements SourceToken {
         this.tokens = [];
 
         const tags = this.tokens,
-            lines = text
-                .substr(3, text.length - 5)
-                .split(U.lineBreaks)
-                .slice(1, -1);
+            lines = SourceDoc.extractCommentLines(text);
 
-        let line: string,
-            tag: SourceDocTag = {
-                kind: TS.SyntaxKind.JSDocTag,
-                tagKind: 'description',
-                text: ''
-            };
+        // leading text without tag is @description:
+        let tag: SourceDocTag = {
+            kind: TS.SyntaxKind.JSDocTag,
+            tagKind: 'description',
+            text: ''
+        };
 
         tags.push(tag);
 
-        for (let i = 0, iEnd = lines.length; i < iEnd; ++i) {
-            line = lines[i].substr(indent).replace(/^ \* ?/gu, '');
-
+        for (const line of lines) {
             if (!line && tags.length > 1) {
                 tags.push({
-                    kind: TS.SyntaxKind.WhitespaceTrivia,
+                    kind: TS.SyntaxKind.NewLineTrivia,
                     tagKind: '',
                     text: ''
                 });
             } else if (line.startsWith('@')) {
-                if (!i) {
-                    tags.pop(); // remove empty description
+
+                if (tags.length === 1) {
+                    if (!tag.text) {
+                        // remove empty initial description
+                        tags.pop();
+                    } else {
+                        // add trailing new lines as tokens
+                        const trail = tag.text.match(new RegExp(
+                            `(?:${U.LINE_BREAKS.source})+$`,
+                            'su'
+                        )) || [''];
+
+                        for (
+                            let i = 1,
+                                iEnd = trail[0].split(U.LINE_BREAKS).length;
+                            i < iEnd;
+                            ++i
+                        ) {
+                            tags.push({
+                                kind: TS.SyntaxKind.NewLineTrivia,
+                                tagKind: '',
+                                text: ''
+                            });
+                        }
+                    }
                 }
 
                 tag = {
@@ -136,7 +202,7 @@ export class SourceDoc extends SourceLine implements SourceToken {
         }
 
         for (const tag of tags) {
-            SourceDoc.decorateTag(tag, lineBreak);
+            SourceDoc.decorateTag(tag);
         }
     }
 
@@ -192,9 +258,7 @@ export class SourceDoc extends SourceLine implements SourceToken {
             firstTag &&
             firstTag.tagKind === 'description'
         ) {
-            part2 = U.trimBreaks(firstTag.text);
-
-            lines.push(U.indent(indent, ' * ', part2, maximalLength));
+            lines.push(U.indent(indent, ' * ', firstTag.text, maximalLength));
             tags.shift();
         }
 
@@ -206,7 +270,7 @@ export class SourceDoc extends SourceLine implements SourceToken {
             }
 
             part1 = `@${tag.tagKind}`;
-            part2 = U.trimBreaks(tag.text);
+            part2 = tag.text;
 
             if (tag.tagKind === 'example') {
                 lines.push(U.pad(indent, ` * ${part1}`));
@@ -222,24 +286,16 @@ export class SourceDoc extends SourceLine implements SourceToken {
                 part1 += ` ${tag.tagName}`;
             }
 
-            if (
-                part2 &&
-                ! tag.tagType &&
-                ! tag.tagName &&
-                tag.text.split(U.lineBreaks).length === 1
-            ) {
+            if (part2 && part2.trim().split(/\s/g).length > 1) {
+                lines.push(U.pad(indent, ` * ${part1}`));
                 lines.push(U.indent(
                     indent,
                     ' * ',
-                    `${part1} ${part2}`.trimRight(),
+                    U.trimAll(part2),
                     maximalLength
                 ));
             } else {
-                lines.push(U.pad(indent, ` * ${part1}`));
-
-                if (part2) {
-                    lines.push(U.indent(indent, ' * ', part2, maximalLength));
-                }
+                lines.push(U.pad(indent, ` * ${part1} ${part2}`.trimRight()));
             }
         }
 

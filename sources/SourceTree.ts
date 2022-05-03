@@ -16,7 +16,6 @@
 import * as TS from 'typescript';
 import * as SP from './SourceParser';
 import SourceNode from './SourceNode';
-import SourceToken from './SourceToken';
 
 
 /* *

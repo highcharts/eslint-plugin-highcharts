@@ -110,7 +110,7 @@ export class SourceCode {
                     token.kind === TS.SyntaxKind.JSDocComment ||
                     token.kind === TS.SyntaxKind.MultiLineCommentTrivia
                 ) {
-                    tokenLength = tokenText.split(U.lineBreaks).length;
+                    tokenLength = tokenText.split(U.LINE_BREAKS).length;
 
                     if (tokenLength > 1) {
                         position.line += tokenLength - 1;

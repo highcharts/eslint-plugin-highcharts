@@ -89,10 +89,10 @@ export type UnknownObject = Record<string, unknown>;
  * */
 
 
-export const lineBreaks = /\r\n|\r|\n/gu;
+export const LINE_BREAKS = /\r\n|\r|\n/gu;
 
 
-export const paragraph = new RegExp(`${lineBreaks.source}{2,}`, 'gu');
+export const PARAGRAPHS = new RegExp(`${LINE_BREAKS.source}{2,}`, 'gu');
 
 
 /* *
@@ -122,14 +122,14 @@ export function extractTypes(
 export function extractFirstLine(
     text: string
 ): string {
-    return text.split(lineBreaks)[0];
+    return text.split(LINE_BREAKS)[0];
 }
 
 
 export function extractLastLine(
     text: string
 ): string {
-    const lines = text.split(lineBreaks);
+    const lines = text.split(LINE_BREAKS);
     return lines[lines.length-1];
 }
 
@@ -137,7 +137,7 @@ export function extractLastLine(
 export function detectLineBreak(
     text: string
 ): (string|undefined) {
-    return text.match(new RegExp(lineBreaks.source, 'u'))?.[0]
+    return text.match(new RegExp(LINE_BREAKS.source, 'u'))?.[0]
 }
 
 
@@ -160,59 +160,65 @@ export function indent (
     text: string,
     wrap?: number
 ): string {
-    const lb = detectLineBreak(text);
+
+    const lb = detectLineBreak(text) || '\n';
 
     prefix = pad(indent, prefix);
 
     if (!wrap) {
-        return prefix + text.replace(lineBreaks, `${lb}${prefix}`);
+        return prefix + text.replace(LINE_BREAKS, `${lb}${prefix}`);
     }
 
     const fragments = text
-        .replace(paragraph, ' \x00 ') // paragraphs
-        .replace(lineBreaks, ' \x05 ') // single break
+        .replace(PARAGRAPHS, ' \x00 ') // paragraphs
+        .replace(LINE_BREAKS, ' \x05 ') // single break
+        .trim()
         .split(/\s/gmu);
 
     let codeBlock = false,
+        newLine = true,
         line = prefix,
         paddedStr = '';
 
     for (const fragment of fragments) {
 
         if (fragment === '\x00') {
+            newLine = true;
             paddedStr += line.trimRight() + lb + prefix.trimRight() + lb;
-            line = prefix;
             continue;
         }
 
         if (fragment === '\x05') {
             if (codeBlock) {
-                paddedStr += line.trimRight() + lb;
-                line = prefix;
+                newLine = true;
+                paddedStr += line + lb;
             }
             continue;
         }
 
         if (fragment.startsWith('```')) {
             codeBlock = !codeBlock;
-            if (line !== prefix) {
+
+            if (!newLine) {
+                newLine = true;
                 paddedStr += line.trimRight() + lb;
             }
-            line = prefix + fragment;
-            continue;
         }
 
-        if (!codeBlock && line.length + 1 + fragment.length > wrap) {
+        if (!codeBlock && !newLine && line.length + 1 + fragment.length > wrap) {
+            newLine = true;
             paddedStr += line.trimRight() + lb;
+        }
+
+        if (newLine) {
+            newLine = false;
             line = prefix + fragment;
-        } else if (line === prefix) {
-            line += (fragment || ' ');
         } else {
             line += ' ' + fragment;
         }
     }
 
-    return (line === prefix ? paddedStr : paddedStr + line.trimRight());
+    return newLine ? paddedStr : paddedStr + line.trimRight();
 }
 
 
@@ -268,18 +274,14 @@ export function isNodeStatement<T extends TS.Node> (
 
 
 export function pad(indent: number, suffix: string = ''): string {
-    if (indent > 0) {
-        return ' '.repeat(indent) + suffix;
-    }
-
-    return suffix;
+    return ' '.repeat(indent) + suffix;
 }
 
 
 export function removeBreaks (
     text: string
 ): string {
-    return text.replace(lineBreaks, ' ').trim();
+    return text.replace(LINE_BREAKS, ' ').trim();
 }
 
 export function trimAll (
@@ -290,7 +292,7 @@ export function trimAll (
 
     if (keepParagraphs) {
         return text
-            .replace(paragraph, ' \x00 ')
+            .replace(PARAGRAPHS, ' \x00 ')
             .replace(/\s+/gu, ' ')
             .trim()
             .replace(/ ?\x00 ?/, `${lb}${lb}`);
