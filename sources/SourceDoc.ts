@@ -22,6 +22,17 @@ import SourceToken from './SourceToken';
 
 /* *
  *
+ *  Constants
+ *
+ * */
+
+
+// eslint-disable-next-line max-len
+const tagPattern = /^@(\w+)([ \t]+(?:true|false|[\d./]+|'[^'\r\n]+'|\{[^\}\s]+\}))?([ \t]+[\w\-./]+)?([\s\S]*)?$/u;
+
+
+/* *
+ *
  *  Class
  *
  * */
@@ -41,53 +52,32 @@ export class SourceDoc extends SourceLine implements SourceToken {
         tag: SourceDocTag
     ): SourceDocTag {
 
-        const match = tag.text.match(
-            /^@(\w+)(\s+\{[\w.()<>]+\})?(\s+[^\[\]\s]+|\[[^\[\]\s]+\])?(.*)$/su
-        );
+        const match = tag.text.match(tagPattern);
 
         if (match) {
             const {
                 1: tagKind,
+                2: tagType,
+                3: tagName,
                 4: tagText
             } = match;
 
-            let {
-                2: tagType,
-                3: tagName
-            } = match;
-
-            if (tagText[0] === ' ') {
-                tag.text = tagText.substr(1);
+            if (tagText) {
+                tag.text = tagText.trimLeft();
             } else {
-                tag.text = tagText;
+                tag.text = '';
             }
 
-            if (tagName) {
-                tagName = tagName.replace(/^ /u, '');
-
-                if (tag.tagName) {
-                    tag.text = `${tagName} ${tag.text}`;
-                } else {
-                    tag.tagName = tagName;
-                }
+            if (!tag.tagName && tagName) {
+                tag.tagName = tagName.replace(/^[ \t]/u, '');
             }
 
-            if (tagType) {
-                tagType = tagType.replace(/^ /u, '');
-
-                if (tag.tagType) {
-                    tag.text = `${tagType} ${tag.text}`;
-                } else {
-                    tag.tagType = tagType;
-                }
+            if (!tag.tagType && tagType) {
+                tag.tagType = tagType.replace(/^[ \t]/u, '');
             }
 
-            if (tagKind) {
-                if (tag.tagKind) {
-                    tag.text = `${tagKind} ${tag.text}`;
-                } else {
-                    tag.tagKind = tagKind;
-                }
+            if (!tag.tagKind && tagKind) {
+                tag.tagKind = tagKind;
             }
         }
 
@@ -252,7 +242,8 @@ export class SourceDoc extends SourceLine implements SourceToken {
             lines: Array<string> = ['/**'];
 
         let part1: string,
-            part2: string;
+            part2: string,
+            padded: string;
 
         if (
             firstTag &&
@@ -274,7 +265,7 @@ export class SourceDoc extends SourceLine implements SourceToken {
 
             if (tag.tagKind === 'example') {
                 lines.push(U.pad(indent, ` * ${part1}`));
-                lines.push(U.indent(indent, ' * ', part2));
+                lines.push(U.pad(indent, ` * ${U.trimBreaks(part2)}`));
                 continue;
             }
 
@@ -286,16 +277,41 @@ export class SourceDoc extends SourceLine implements SourceToken {
                 part1 += ` ${tag.tagName}`;
             }
 
-            if (part2 && part2.trim().split(/\s/g).length > 1) {
-                lines.push(U.pad(indent, ` * ${part1}`));
-                lines.push(U.indent(
-                    indent,
-                    ' * ',
-                    U.trimAll(part2),
-                    maximalLength
-                ));
+            padded = U.pad(indent, ` * ${part1} ${part2}`.trimRight());
+
+            if (
+                padded.length <= maximalLength &&
+                padded.trim().split(/\s/gu).length <= 3
+            ) {
+                lines.push(padded);
             } else {
-                lines.push(U.pad(indent, ` * ${part1} ${part2}`.trimRight()));
+                padded = U.pad(indent, ` * ${part1}`);
+
+                if (padded.length <= maximalLength) {
+                    lines.push(padded);
+                } else {
+                    lines.push(U.pad(indent, ` * ${U.trimAll(part1)}`));
+                }
+
+                if (part2) {
+                    padded = ' * ';
+
+                    if (
+                        tag.tagType &&
+                        tag.tagType[0] !== ' ' &&
+                        tag.tagName &&
+                        tag.tagName[0] !== ' '
+                    ) {
+                        padded += U.pad(tag.tagKind.length + 2);
+                    }
+
+                    lines.push(U.indent(
+                        indent,
+                        padded,
+                        U.trimAll(part2),
+                        maximalLength
+                    ));
+                }
             }
         }
 

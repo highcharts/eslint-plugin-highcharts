@@ -92,7 +92,10 @@ export type UnknownObject = Record<string, unknown>;
 export const LINE_BREAKS = /\r\n|\r|\n/gu;
 
 
-export const PARAGRAPHS = new RegExp(`${LINE_BREAKS.source}{2,}`, 'gu');
+export const PARAGRAPHS = new RegExp(`(?:${LINE_BREAKS.source}){2,2}`, 'gu');
+
+
+export const SPACES = /[ \t]/gu;
 
 
 /* *
@@ -173,17 +176,19 @@ export function indent (
         .replace(PARAGRAPHS, ' \x00 ') // paragraphs
         .replace(LINE_BREAKS, ' \x05 ') // single break
         .trim()
-        .split(/\s/gmu);
+        .split(SPACES);
 
     let codeBlock = false,
         newLine = true,
         line = prefix,
+        newParagraph = false,
         paddedStr = '';
 
     for (const fragment of fragments) {
 
         if (fragment === '\x00') {
             newLine = true;
+            newParagraph = true;
             paddedStr += line.trimRight() + lb + prefix.trimRight() + lb;
             continue;
         }
@@ -192,6 +197,9 @@ export function indent (
             if (codeBlock) {
                 newLine = true;
                 paddedStr += line + lb;
+            } else if (newParagraph) {
+                newLine = true;
+                paddedStr += prefix.trimRight() + lb;
             }
             continue;
         }
@@ -215,6 +223,10 @@ export function indent (
             line = prefix + fragment;
         } else {
             line += ' ' + fragment;
+        }
+
+        if (fragment && newParagraph) {
+            newParagraph = false;
         }
     }
 
@@ -305,5 +317,8 @@ export function trimAll (
 export function trimBreaks (
     text: string
 ): string {
-    return text.replace(/^\s+|\s+$/gu, '')
+    return text.replace(new RegExp(
+        `^(?:${LINE_BREAKS.source}){1,}|(?:${LINE_BREAKS.source}){1,}$`,
+        'gu'
+    ), '');
 }
