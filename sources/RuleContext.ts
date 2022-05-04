@@ -92,7 +92,7 @@ export class RuleContext<T extends RuleOptions = RuleOptions> {
             ...this.settings,
             ...(esLintContext.options[1] || {})
         };
-
+        this.preparedReports = [];
         this.sourcePath = Path.relative(this.cwd, esLintContext.getFilename());
     }
 
@@ -117,6 +117,9 @@ export class RuleContext<T extends RuleOptions = RuleOptions> {
 
 
     public options: T;
+
+
+    public readonly preparedReports: Array<ESLint.Rule.ReportDescriptor>;
 
 
     public settings: ESLint.Rule.RuleContext['settings'];
@@ -156,6 +159,22 @@ export class RuleContext<T extends RuleOptions = RuleOptions> {
      * */
 
 
+    public prepareReport(
+        position: SourcePosition,
+        message: string,
+        fix?: ESLint.Rule.ReportFixer
+    ): void {
+        this.preparedReports.push({
+            fix,
+            loc: {
+                // ESLint needs column zero-based:
+                column: position.column - 1,
+                line: position.line
+            },
+            message
+        });
+    }
+
     public report (
         position: SourcePosition,
         message: string,
@@ -170,6 +189,32 @@ export class RuleContext<T extends RuleOptions = RuleOptions> {
             },
             message
         });
+    }
+
+
+    public sendReports(
+        finalFix?: ESLint.Rule.ReportFixer
+    ): void {
+        const esLintContext = this.esLintContext,
+            reports = this.preparedReports.splice(0);
+
+        if (finalFix) {
+            for (let i = 0, iEnd = reports.length - 1, report: ESLint.Rule.ReportDescriptor; i <= iEnd; ++i) {
+                report = reports[i];
+
+                if (i === iEnd) {
+                    report.fix = finalFix;
+                } else {
+                    report.fix = () => null;
+                }
+
+                esLintContext.report(report);
+            }
+        } else {
+            for (const report of reports) {
+                esLintContext.report(report);
+            }
+        }
     }
 
 

@@ -196,7 +196,7 @@ export function indent (
         if (fragment === '\x05') {
             if (codeBlock) {
                 newLine = true;
-                paddedStr += line + lb;
+                paddedStr += line.trimRight() + lb;
             } else if (newParagraph) {
                 newLine = true;
                 paddedStr += prefix.trimRight() + lb;
@@ -213,7 +213,11 @@ export function indent (
             }
         }
 
-        if (!codeBlock && !newLine && line.length + 1 + fragment.length > wrap) {
+        if (
+            !codeBlock &&
+            !newLine &&
+            line.trimRight().length + 1 + fragment.length > wrap
+        ) {
             newLine = true;
             paddedStr += line.trimRight() + lb;
         }

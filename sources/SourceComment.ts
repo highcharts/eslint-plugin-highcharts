@@ -21,12 +21,59 @@ import SourceToken from './SourceToken';
 
 /* *
  *
+ *  Constants
+ *
+ * */
+
+
+const starPattern = /^[ \t]+\*[ \t]?/u
+
+
+/* *
+ *
  *  Class
  *
  * */
 
 
 export class SourceComment extends SourceLine implements SourceToken {
+
+
+    /* *
+     *
+     *  Static Functions
+     *
+     * */
+
+
+    public static extractCommentLines(
+        text: string,
+        indent: number = 0
+    ): Array<string> {
+        let lines = text.split(U.LINE_BREAKS);
+
+        if (lines.length === 1) {
+            // remove /** and */
+            return [ text.substr(4, text.length - 7) ];
+        }
+
+        // remove /**\n and \n*/
+        lines = lines.slice(1, -1);
+
+        for (let i = 0, iEnd = lines.length, line: string; i < iEnd; ++i) {
+            line = lines[i];
+
+            if (line.match(starPattern)) {
+                // remove *
+                lines[i] = line.replace(starPattern, '');
+            } else if (indent) {
+                // remove indent
+                lines[i] = line.substr(indent);
+            }
+        }
+
+        return lines;
+    }
 
 
     /* *
