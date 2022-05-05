@@ -15,10 +15,11 @@
     },
     "main": "lib/index.js",
     "scripts": {
-        "build": "npx tsc -b sources",
-        "lint": "npx eslint sources",
+        "build": "tsc -b sources",
+        "build-watch": "npm run build -- --watch",
+        "lint": "eslint sources",
         "test": "mocha tests --recursive",
-        "watch": "npm run build -- --watch"
+        "test-sources": "tsc -b tests/sources && node tests/sources/index.js"
     },
     "dependencies": {
         "eslint": "^7.27.0",
