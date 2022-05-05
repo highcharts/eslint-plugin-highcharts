@@ -59,7 +59,7 @@ const optionsSchema = {
     'maximalLength': {
         'type': 'integer'
     }
-}
+};
 
 
 /* *

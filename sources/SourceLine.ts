@@ -64,6 +64,25 @@ export class SourceLine {
      * */
 
 
+    public getEssentialTokens(): Array<SourceToken> {
+        const essentials: Array<SourceToken> = [],
+            tokens = this.tokens;
+
+        for (const token of tokens) {
+            switch (token.kind) {
+                case TS.SyntaxKind.EndOfFileToken:
+                case TS.SyntaxKind.NewLineTrivia:
+                case TS.SyntaxKind.WhitespaceTrivia:
+                    continue;
+                default:
+                    essentials.push(token);
+            }
+        }
+
+        return essentials;
+    }
+
+
     public getIndent(): number {
         const firstToken = this.tokens[0];
 
