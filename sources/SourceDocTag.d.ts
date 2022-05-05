@@ -17,8 +17,8 @@ import type SourceToken from './SourceToken';
 
 
 export interface SourceDocTag extends SourceToken {
+    tagArgument?: string;
     tagKind: string;
-    tagName?: string;
     tagType?: string;
 }
 

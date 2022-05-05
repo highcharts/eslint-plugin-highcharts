@@ -17,6 +17,7 @@
 import * as ESLint from 'eslint';
 import RuleContext from '../RuleContext';
 import RuleOptions from '../RuleOptions';
+import SourceLine from '../SourceLine';
 
 
 /* *
@@ -69,12 +70,13 @@ const optionsSchema = {
 
 
 function createFixer (
-    context: PrettyLengthContext
+    context: PrettyLengthContext,
+    fixLines: Array<SourceLine>
 ): ESLint.Rule.ReportFixer {
     return (): ESLint.Rule.Fix => {
         const code = context.sourceCode,
             fix: Array<string> = [],
-            range: ESLint.AST.Range = [ 0, code.raw.length ],
+            range: ESLint.AST.Range = [ 0, code.raw.length + 256 ],
             lines = code.lines,
             {
                 ignorePattern,
@@ -82,16 +84,22 @@ function createFixer (
             } = context.options,
             ignoreRegExp = (ignorePattern ? new RegExp(ignorePattern) : void 0);
 
+        let text: string;
+
         for (const l of lines) {
+            text = l.toString();
 
             if (
-                ignoreRegExp &&
-                ignoreRegExp.test(l.toString())
+                fixLines.includes(l) &&
+                (
+                    !ignoreRegExp ||
+                    !ignoreRegExp.test(text)
+                )
             ) {
-                continue;
+                fix.push(l.toString(maximalLength));
+            } else {
+                fix.push(text);
             }
-
-            fix.push(l.toString(maximalLength));
         }
 
         return { range, text: fix.join(code.lineBreak) };
@@ -109,6 +117,7 @@ function lint (
         } = context.options,
         ignoreRegExp = (ignorePattern ? new RegExp(ignorePattern) : void 0),
         lines = code.lines,
+        fixLines: Array<SourceLine> = [],
         message = messageTemplate.replace('{0}', `${maximalLength}`);
 
     let maximalLineLength: number;
@@ -130,6 +139,11 @@ function lint (
             if (position) {
                 const wrappedLines = line.getWrappedLines();
 
+                if (wrappedLines.length === 1) {
+                    // only lines with multiline comments for now
+                    continue;
+                }
+
                 let lineIndex = 0;
 
                 for (const wrappedLine of wrappedLines) {
@@ -138,23 +152,26 @@ function lint (
                         wrappedLine.length > maximalLength &&
                         wrappedLine.split(/\s+/g).length > 1
                     ) {
-                        context.report(
+                        context.prepareReport(
                             {
                                 column: maximalLength + 1,
                                 end: position.end,
                                 line: position.line + lineIndex,
                                 start: position.start
                             },
-                            message + ` ${maximalLineLength}`,
-                            createFixer(context)
+                            message + ` ${maximalLineLength}`
                         );
                     }
 
                     ++lineIndex;
                 }
+
+                fixLines.push(line);
             }
         }
     }
+
+    context.sendReports(createFixer(context, fixLines));
 }
 
 

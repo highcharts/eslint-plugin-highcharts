@@ -15,6 +15,7 @@
 
 import * as TS from 'typescript';
 import * as U from './Utilities';
+import SourceComment from './SourceComment';
 import SourceDocTag from './SourceDocTag';
 import SourceLine from './SourceLine';
 import SourceToken from './SourceToken';
@@ -28,7 +29,7 @@ import SourceToken from './SourceToken';
 
 
 // eslint-disable-next-line max-len
-const tagPattern = /^@(\w+)([ \t]+(?:true|false|[\d./]+|'[^'\r\n]+'|\{[^\}\s]+\}))?([ \t]+[\w\-./]+)?([\s\S]*)?$/u;
+const tagPattern = /^@(\w+)([ \t]+\{[^\}\s]+\})?([ \t]+\S+)?(\s[\s\S]*)?$/u;
 
 
 /* *
@@ -58,18 +59,22 @@ export class SourceDoc extends SourceLine implements SourceToken {
             const {
                 1: tagKind,
                 2: tagType,
-                3: tagName,
+                3: tagArgument,
                 4: tagText
             } = match;
 
             if (tagText) {
-                tag.text = tagText.trimLeft();
+                tag.text = U.trimBreaks(tagText).trim();
             } else {
                 tag.text = '';
             }
 
-            if (!tag.tagName && tagName) {
-                tag.tagName = tagName.replace(/^[ \t]/u, '');
+            if (!tag.tagArgument && tagArgument) {
+                if (!tagText || tagText.match(/^[\r\n]/u)) {
+                    tag.tagArgument = tagArgument.replace(/^[ \t]/u, '');
+                } else {
+                    tag.text = `${tagArgument} ${tag.text}`.trimLeft()
+                }
             }
 
             if (!tag.tagType && tagType) {
@@ -89,27 +94,6 @@ export class SourceDoc extends SourceLine implements SourceToken {
         text: string
     ): boolean {
         return /^\/\*\*\s/.test(text);
-    }
-
-
-    public static extractCommentLines(
-        text: string
-    ): Array<string> {
-        let lines = text.split(U.LINE_BREAKS);
-
-        if (lines.length === 1) {
-            // remove /** and */
-            return [ text.substr(4, text.length - 7) ];
-        }
-
-        // remove /**\n and \n*/
-        lines = lines.slice(1, -1);
-
-        for (let i = 0, iEnd = lines.length; i < iEnd; ++i) {
-            lines[i] = lines[i].replace(/^\s+\*\s?/u, '');
-        }
-
-        return lines;
     }
 
 
@@ -133,7 +117,7 @@ export class SourceDoc extends SourceLine implements SourceToken {
         this.tokens = [];
 
         const tags = this.tokens,
-            lines = SourceDoc.extractCommentLines(text);
+            lines = SourceComment.extractCommentLines(text);
 
         // leading text without tag is @description:
         let tag: SourceDocTag = {
@@ -269,49 +253,50 @@ export class SourceDoc extends SourceLine implements SourceToken {
                 continue;
             }
 
-            if (tag.tagType) {
+            if (tag.tagType && tag.tagArgument) {
+                part1 = `${part1} ${tag.tagType} ${tag.tagArgument}`.trim();
+            } else if (tag.tagType) {
                 part1 += ` ${tag.tagType}`;
+            } else if (tag.tagArgument) {
+                part1 += ` ${tag.tagArgument}`;
             }
-
-            if (tag.tagName) {
-                part1 += ` ${tag.tagName}`;
-            }
-
-            padded = U.pad(indent, ` * ${part1} ${part2}`.trimRight());
 
             if (
-                padded.length <= maximalLength &&
-                padded.trim().split(/\s/gu).length <= 3
+                (!part2 && tag.tagType && tag.tagArgument) ||
+                !(part2 && tag.tagType && tag.tagArgument)
             ) {
-                lines.push(padded);
-            } else {
-                padded = U.pad(indent, ` * ${part1}`);
+                padded = U.pad(indent, ` * ${part1} ${part2}`.trimRight());
 
+                // test for one line style
                 if (padded.length <= maximalLength) {
                     lines.push(padded);
-                } else {
-                    lines.push(U.pad(indent, ` * ${U.trimAll(part1)}`));
+                    continue;
+                }
+            }
+
+            padded = U.pad(indent, ` * ${part1}`);
+
+            // test for spaced style
+            if (padded.length <= maximalLength) {
+                lines.push(padded);
+            } else {
+                lines.push(U.pad(indent, ` * ${U.trimAll(part1)}`));
+            }
+
+            if (part2) {
+                padded = ' * ';
+
+                // extra indent for @param etc
+                if (
+                    tag.tagArgument &&
+                    tag.tagArgument[0] !== ' '
+                ) {
+                    padded += U.pad(tag.tagKind.length + 2);
                 }
 
-                if (part2) {
-                    padded = ' * ';
-
-                    if (
-                        tag.tagType &&
-                        tag.tagType[0] !== ' ' &&
-                        tag.tagName &&
-                        tag.tagName[0] !== ' '
-                    ) {
-                        padded += U.pad(tag.tagKind.length + 2);
-                    }
-
-                    lines.push(U.indent(
-                        indent,
-                        padded,
-                        U.trimAll(part2),
-                        maximalLength
-                    ));
-                }
+                lines.push(
+                    U.indent(indent, padded, U.trimAll(part2), maximalLength)
+                );
             }
         }
 
