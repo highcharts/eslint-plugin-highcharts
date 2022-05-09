@@ -29,6 +29,19 @@ import SourceTree from './SourceTree';
 
 /* *
  *
+ *  Constants
+ *
+ * */
+
+
+const sourceCodeCache: Record<string, SourceCode> = {};
+
+
+const sourceTreeCache: Record<string, SourceTree> = {};
+
+
+/* *
+ *
  *  Class
  *
  * */
@@ -126,11 +139,19 @@ export class RuleContext<T extends RuleOptions = RuleOptions> {
 
 
     public get sourceCode (): SourceCode {
+
         if (!this._sourceCode) {
-            this._sourceCode = new SourceCode(
-                this.sourcePath,
-                FS.readFileSync(this.sourcePath).toString()
-            );
+            const sourcePath = this.sourcePath;
+
+            if (sourceCodeCache[sourcePath]) {
+                this._sourceCode = sourceCodeCache[sourcePath];
+            } else {
+                this._sourceCode = new SourceCode(
+                    sourcePath,
+                    FS.readFileSync(sourcePath).toString()
+                );
+                sourceCodeCache[sourcePath] = this._sourceCode;
+            }
         }
 
         return this._sourceCode;
@@ -141,11 +162,19 @@ export class RuleContext<T extends RuleOptions = RuleOptions> {
 
 
     public get sourceTree (): SourceTree {
+
         if (!this._sourceTree) {
-            this._sourceTree = new SourceTree(
-                this.sourcePath,
-                FS.readFileSync(this.sourcePath).toString()
-            );
+            const sourcePath = this.sourcePath;
+
+            if (sourceTreeCache[sourcePath]) {
+                this._sourceTree = sourceTreeCache[sourcePath];
+            } else {
+                this._sourceTree = new SourceTree(
+                    sourcePath,
+                    FS.readFileSync(sourcePath).toString()
+                );
+                sourceTreeCache[sourcePath] = this._sourceTree;
+            }
         }
 
         return this._sourceTree;
