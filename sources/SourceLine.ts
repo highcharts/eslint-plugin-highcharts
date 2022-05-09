@@ -114,6 +114,28 @@ export class SourceLine {
     }
 
 
+    public getTokenKinds(start?: number, end?: number): Array<TS.SyntaxKind> {
+        const tokenKinds: Array<TS.SyntaxKind> = [],
+            tokens = this.tokens,
+            tokensLength = tokens.length;
+
+        if (start && start >= tokensLength) {
+            return [];
+        }
+
+        for (
+            let i = Math.max(start || 0, 0),
+                iEnd = Math.min(end || tokensLength, tokensLength);
+            i < iEnd;
+            ++i
+        ) {
+            tokenKinds.push(tokens[i].kind);
+        }
+
+        return tokenKinds;
+    }
+
+
     /**
      * Returns the token position relative to the line.
      */
