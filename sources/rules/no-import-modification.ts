@@ -34,8 +34,6 @@ type NoImportModificationContext = RuleContext<NoImportModificationOptions>;
 
 interface NoImportModificationOptions extends RuleOptions {
     ignorePattern?: string;
-    indentSize?: number;
-    maximalLength: number;
 }
 
 
@@ -49,9 +47,7 @@ interface NoImportModificationOptions extends RuleOptions {
 const messageTemplate = 'Imports should not be immediately modified. Create a composer.';
 
 
-const optionsDefaults: NoImportModificationOptions = {
-    maximalLength: 80
-};
+const optionsDefaults: NoImportModificationOptions = {};
 
 
 const optionsSchema = {};
@@ -165,7 +161,7 @@ function lint(
 
 
 export = RuleContext.setupRuleExport(
-    'layout',
+    'problem',
     optionsSchema,
     optionsDefaults,
     lint,

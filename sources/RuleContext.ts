@@ -15,7 +15,6 @@
 
 import type * as ESLint from 'eslint';
 import type * as JSONSchema from 'json-schema';
-import type FixFunction from './FixFunction';
 import type LintFunction from './LintFunction';
 import type RuleOptions from './RuleOptions';
 
@@ -25,19 +24,6 @@ import RuleType from './RuleType';
 import SourceCode from './SourceCode';
 import SourcePosition from './SourcePosition';
 import SourceTree from './SourceTree';
-
-
-/* *
- *
- *  Constants
- *
- * */
-
-
-const sourceCodeCache: Record<string, SourceCode> = {};
-
-
-const sourceTreeCache: Record<string, SourceTree> = {};
 
 
 /* *
@@ -143,15 +129,10 @@ export class RuleContext<T extends RuleOptions = RuleOptions> {
         if (!this._sourceCode) {
             const sourcePath = this.sourcePath;
 
-            if (sourceCodeCache[sourcePath]) {
-                this._sourceCode = sourceCodeCache[sourcePath];
-            } else {
-                this._sourceCode = new SourceCode(
-                    sourcePath,
-                    FS.readFileSync(sourcePath).toString()
-                );
-                sourceCodeCache[sourcePath] = this._sourceCode;
-            }
+            this._sourceCode = new SourceCode(
+                sourcePath,
+                FS.readFileSync(sourcePath).toString()
+            );
         }
 
         return this._sourceCode;
@@ -166,15 +147,10 @@ export class RuleContext<T extends RuleOptions = RuleOptions> {
         if (!this._sourceTree) {
             const sourcePath = this.sourcePath;
 
-            if (sourceTreeCache[sourcePath]) {
-                this._sourceTree = sourceTreeCache[sourcePath];
-            } else {
-                this._sourceTree = new SourceTree(
-                    sourcePath,
-                    FS.readFileSync(sourcePath).toString()
-                );
-                sourceTreeCache[sourcePath] = this._sourceTree;
-            }
+            this._sourceTree = new SourceTree(
+                sourcePath,
+                FS.readFileSync(sourcePath).toString()
+            );
         }
 
         return this._sourceTree;

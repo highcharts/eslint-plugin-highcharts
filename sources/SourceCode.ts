@@ -13,6 +13,7 @@
  * */
 
 
+import * as Timers from 'timers';
 import * as TS from 'typescript';
 import * as U from './Utilities';
 import SourceComment from './SourceComment';
@@ -20,6 +21,16 @@ import SourceDoc from './SourceDoc';
 import SourceLine from './SourceLine';
 import SourcePosition from './SourcePosition';
 import SourceToken from './SourceToken';
+
+
+/* *
+ *
+ *  Constant
+ *
+ * */
+
+
+const tsScanner = TS.createScanner(TS.ScriptTarget.Latest, false);
 
 
 /* *
@@ -169,19 +180,17 @@ export class SourceCode {
             return;
         }
 
-        const scanner = TS.createScanner(TS.ScriptTarget.Latest, false);
-
         let indent: number,
             kind: TS.SyntaxKind,
             line = new SourceLine(lineBreak),
             text: string,
             token: SourceToken;
 
-        scanner.setText(sourceCode);
+        tsScanner.setText(sourceCode);
 
         do {
-            kind = scanner.scan();
-            text = scanner.getTokenText();
+            kind = tsScanner.scan();
+            text = tsScanner.getTokenText();
 
             if (
                 kind === TS.SyntaxKind.NewLineTrivia ||
@@ -206,7 +215,7 @@ export class SourceCode {
 
             line.tokens.push(token);
 
-        } while (kind !== TS.SyntaxKind.EndOfFileToken)
+        } while (kind !== TS.SyntaxKind.EndOfFileToken);
     }
 
 
