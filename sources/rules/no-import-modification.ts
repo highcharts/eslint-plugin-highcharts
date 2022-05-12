@@ -29,12 +29,7 @@ import SourceToken from '../SourceToken';
  * */
 
 
-type NoImportModificationContext = RuleContext<NoImportModificationOptions>;
-
-
-interface NoImportModificationOptions extends RuleOptions {
-    ignorePattern?: string;
-}
+type NoImportModificationContext = RuleContext<RuleOptions>;
 
 
 /* *
@@ -44,10 +39,13 @@ interface NoImportModificationOptions extends RuleOptions {
  * */
 
 
-const messageTemplate = 'Imports should not be immediately modified. Create a composer.';
+const messageTemplate = [
+    'Imports should not be immediately modified.',
+    'Create a composer.'
+].join(' ');
 
 
-const optionsDefaults: NoImportModificationOptions = {};
+const optionsDefaults: RuleOptions = {};
 
 
 const optionsSchema = {};
