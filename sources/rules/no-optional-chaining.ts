@@ -94,7 +94,7 @@ function lint (
  * */
 
 export = RuleContext.setupRuleExport(
-    'layout',
+    'problem',
     optionsSchema,
     optionsDefaults,
     lint,

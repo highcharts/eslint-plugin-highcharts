@@ -19,6 +19,7 @@ import * as ESLint from 'eslint';
 import * as TS from 'typescript';
 import RuleContext from '../RuleContext';
 import RuleOptions from '../RuleOptions';
+import SourcePosition from '../SourcePosition';
 import SourceToken from '../SourceToken';
 
 
@@ -57,9 +58,13 @@ const optionsSchema = {};
 
 
 function createFixer(
-    range: ESLint.AST.Range
+    firstPosition: SourcePosition,
+    secondPosition: SourcePosition
 ): ESLint.Rule.ReportFixer {
-    return (): ESLint.Rule.Fix => ({ range, text: '' });
+    return (): ESLint.Rule.Fix => ({
+        range: [firstPosition.end, secondPosition.end],
+        text: ''
+    });
 }
 
 function lint (
@@ -68,21 +73,16 @@ function lint (
     const code = context.sourceCode,
         lines = code.lines;
 
-    let tokens: Array<SourceToken>;
+    let firstToken: SourceToken,
+        secondToken: SourceToken,
+        tokens: Array<SourceToken>;
 
     for (const line of lines) {
         tokens = line.getEssentialTokens();
 
-        for (
-            let index = 0,
-                indexEnd = tokens.length - 2,
-                firstToken: SourceToken,
-                secondToken: SourceToken;
-            index < indexEnd;
-            ++index
-        ) {
-            firstToken = tokens[index];
-            secondToken = tokens[index+1];
+        for (let i = 0, iEnd = tokens.length - 2; i < iEnd; ++i) {
+            firstToken = tokens[i];
+            secondToken = tokens[i+1];
 
             if (
                 firstToken.kind === TS.SyntaxKind.ImportKeyword &&
@@ -92,15 +92,10 @@ function lint (
                     secondPosition = code.getTokenPosition(line, secondToken);
 
                 if (firstPosition && secondPosition) {
-                    const range: ESLint.AST.Range = [
-                        firstPosition.end,
-                        secondPosition.end
-                    ];
-
                     context.report(
                         secondPosition,
                         message,
-                        createFixer(range)
+                        createFixer(firstPosition, secondPosition)
                     );
                 }
             }

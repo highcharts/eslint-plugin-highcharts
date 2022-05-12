@@ -161,12 +161,12 @@ function lint (
                             },
                             message + ` ${maximalLineLength}`
                         );
+
+                        fixLines.push(line);
                     }
 
                     ++lineIndex;
                 }
-
-                fixLines.push(line);
             }
         }
     }

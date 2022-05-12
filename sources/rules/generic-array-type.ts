@@ -85,30 +85,25 @@ function lint (
     const code = context.sourceCode,
         lines = code.lines;
 
-    let tokens: Array<SourceToken>;
+    let firstToken: SourceToken,
+        secondToken: SourceToken,
+        thirdToken: SourceToken,
+        tokens: Array<SourceToken>;
 
     for (const line of lines) {
         tokens = line.tokens;
 
-        for (
-            let index = 0,
-                indexEnd = tokens.length - 2,
-                identifierToken: SourceToken,
-                openBracketToken: SourceToken,
-                closeBracketToken: SourceToken;
-            index < indexEnd;
-            ++index
-        ) {
-            identifierToken = tokens[index];
-            openBracketToken = tokens[index+1];
-            closeBracketToken = tokens[index+2];
+        for (let i = 0, iEnd = tokens.length - 2; i < iEnd; ++i) {
+            firstToken = tokens[i];
+            secondToken = tokens[i+1];
+            thirdToken = tokens[i+2];
 
             if (
-                identifierToken.kind === TS.SyntaxKind.Identifier &&
-                openBracketToken.kind === TS.SyntaxKind.OpenBracketToken &&
-                closeBracketToken.kind === TS.SyntaxKind.CloseBracketToken
+                firstToken.kind === TS.SyntaxKind.Identifier &&
+                secondToken.kind === TS.SyntaxKind.OpenBracketToken &&
+                thirdToken.kind === TS.SyntaxKind.CloseBracketToken
             ) {
-                const position = code.getTokenPosition(line, openBracketToken);
+                const position = code.getTokenPosition(line, secondToken);
 
                 if (position) {
                     context.report(
@@ -116,9 +111,9 @@ function lint (
                         message,
                         createFixer(
                             position,
-                            identifierToken,
-                            openBracketToken,
-                            closeBracketToken
+                            firstToken,
+                            secondToken,
+                            thirdToken
                         )
                     );
                 }
