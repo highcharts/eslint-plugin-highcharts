@@ -138,11 +138,11 @@ export class SourceComment extends SourceLine implements SourceToken {
     public toString(
         maximalLength?: number
     ): string {
-        const lines: Array<string> = [];
+        const indent = this.indent,
+            lines: Array<string> = [];
 
         if (maximalLength) {
             let line: string = '',
-                match: (RegExpMatchArray|null),
                 words: Array<string>;
 
             for (const token of this.tokens) {
@@ -155,13 +155,7 @@ export class SourceComment extends SourceLine implements SourceToken {
                     if (line.length + 1 + word.length > maximalLength) {
                         lines.push(line.trimRight());
 
-                        match = line.match(/^\s*\*+\s*/);
-
-                        if (match && match.groups) {
-                            line = match[0] + word;
-                        } else {
-                            line = word;
-                        }
+                        line = U.pad(indent, word);
                     } else {
                         line += ` ${word}`;
                     }
@@ -171,11 +165,11 @@ export class SourceComment extends SourceLine implements SourceToken {
             }
         } else {
             for (const token of this.tokens) {
-                lines.push(token.text);
+                lines.push(U.pad(indent, token.text));
             }
         }
 
-        return lines.join(this.lineBreak);
+        return lines.join(this.lineBreak).substr(indent);
     }
 
 

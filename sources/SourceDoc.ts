@@ -29,7 +29,7 @@ import SourceToken from './SourceToken';
 
 
 // eslint-disable-next-line max-len
-const tagPattern = /^@(\w+)([ \t]+\{[^\}\s]+\})?([ \t]+\S+)?(\s[\s\S]*)?$/u;
+const tagPattern = /^@(\S+)([ \t]+\{[^\}\s]+\})?([ \t]+\S+)?(\s[\s\S]*)?$/u;
 
 
 /* *
