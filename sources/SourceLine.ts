@@ -168,6 +168,7 @@ export class SourceLine {
             position.start += tokenText.length;
         }
 
+        position.column = position.start + 1;
         position.end = token.text.length;
 
         return position;
