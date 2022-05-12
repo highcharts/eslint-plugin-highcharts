@@ -43,7 +43,9 @@ const message = [
     'Instead use the `pick` function or `&&` conditions.'
 ].join(' ');
 
+
 const optionsDefaults: RuleOptions = {};
+
 
 const optionsSchema = {};
 
@@ -79,12 +81,14 @@ function lint (
                 const position = code.getTokenPosition(line, firstToken);
 
                 if (position) {
-                    context.report(position, message);
+                    context.prepareReport(position, message);
                 }
             }
 
         }
     }
+
+    context.sendReports();
 }
 
 /* *

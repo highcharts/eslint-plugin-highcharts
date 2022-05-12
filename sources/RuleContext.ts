@@ -166,27 +166,9 @@ export class RuleContext<T extends RuleOptions = RuleOptions> {
 
     public prepareReport(
         position: SourcePosition,
-        message: string,
-        fix?: ESLint.Rule.ReportFixer
+        message: string
     ): void {
         this.preparedReports.push({
-            fix,
-            loc: {
-                // ESLint needs column zero-based:
-                column: position.column - 1,
-                line: position.line
-            },
-            message
-        });
-    }
-
-    public report (
-        position: SourcePosition,
-        message: string,
-        fix?: ESLint.Rule.ReportFixer
-    ): void {
-        this.esLintContext.report({
-            fix,
             loc: {
                 // ESLint needs column zero-based:
                 column: position.column - 1,

@@ -19,6 +19,7 @@ import * as ESLint from 'eslint';
 import * as TS from 'typescript';
 import RuleContext from '../RuleContext';
 import RuleOptions from '../RuleOptions';
+import SourceLine from '../SourceLine';
 import SourcePosition from '../SourcePosition';
 import SourceToken from '../SourceToken';
 
@@ -58,32 +59,18 @@ const optionsSchema = {};
 
 
 function createFixer(
-    position: SourcePosition,
-    identifierToken: SourceToken,
-    openBracketToken: SourceToken,
-    closeBracketToken: SourceToken
+    context: GenericArrayTypeContext,
+    linesToFix: Array<SourceLine>
 ): ESLint.Rule.ReportFixer {
-    return (): (ESLint.Rule.Fix|null) => {
-        const range: ESLint.AST.Range = [
-                position.start,
-                (
-                    position.start
-                    + identifierToken.text.length
-                    + openBracketToken.text.length
-                    + closeBracketToken.text.length
-                )
-            ],
-            text = `Array<${identifierToken}>`;
-
-        return { range, text };
-    };
+    return (): (ESLint.Rule.Fix|null) => null;
 }
 
 function lint (
     context: GenericArrayTypeContext
 ): void {
     const code = context.sourceCode,
-        lines = code.lines;
+        lines = code.lines,
+        linesToFix: Array<SourceLine> = [];
 
     let firstToken: SourceToken,
         secondToken: SourceToken,
@@ -106,21 +93,18 @@ function lint (
                 const position = code.getTokenPosition(line, secondToken);
 
                 if (position) {
-                    context.report(
+                    context.prepareReport(
                         position,
-                        message,
-                        createFixer(
-                            position,
-                            firstToken,
-                            secondToken,
-                            thirdToken
-                        )
+                        message
                     );
+                    linesToFix.push(line);
                 }
             }
 
         }
     }
+
+    context.sendReports(createFixer(context, linesToFix));
 }
 
 /* *
