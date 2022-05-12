@@ -62,8 +62,81 @@ function createFixer(
     context: GenericArrayTypeContext,
     linesToFix: Array<SourceLine>
 ): ESLint.Rule.ReportFixer {
-    return (): (ESLint.Rule.Fix|null) => null;
+    return (): (ESLint.Rule.Fix|null) => {
+        const code = context.sourceCode,
+            fix: Array<string> = [],
+            range: ESLint.AST.Range = [ 0, code.raw.length + 256 ],
+            lines = code.lines;
+
+        let firstToken: SourceToken,
+            secondToken: SourceToken,
+            thirdToken: SourceToken,
+            tokenReplacements: Array<SourceToken>,
+            tokens: Array<SourceToken>;
+
+        for (const l of lines) {
+
+            if (linesToFix.includes(l)) {
+                tokens = l.tokens;
+
+                for (let i = 0, iEnd = tokens.length - 2; i < iEnd; ++i) {
+                    firstToken = tokens[i];
+                    secondToken = tokens[i+1];
+                    thirdToken = tokens[i+2];
+
+                    if (isMatch(firstToken, secondToken, thirdToken)) {
+                        tokenReplacements = [{
+                            kind: TS.SyntaxKind.Identifier,
+                            text: 'Array'
+                        }, {
+                            kind: TS.SyntaxKind.LessThanToken,
+                            text: '<'
+                        },
+                        firstToken,
+                        {
+                            kind: TS.SyntaxKind.GreaterThanToken,
+                            text: '>'
+                        }];
+                        tokens.splice(i, 3, ...tokenReplacements);
+                        iEnd = tokens.length - 2;
+                    }
+                }
+            }
+
+            fix.push(l.toString());
+        }
+
+        return { range, text: fix.join(code.lineBreak) };
+    };
 }
+
+
+function isMatch(
+    firstToken: SourceToken,
+    secondToken: SourceToken,
+    thirdToken: SourceToken
+): boolean {
+    return (
+        secondToken.kind === TS.SyntaxKind.OpenBracketToken &&
+        thirdToken.kind === TS.SyntaxKind.CloseBracketToken &&
+        (
+            firstToken.kind === TS.SyntaxKind.AnyKeyword ||
+            firstToken.kind === TS.SyntaxKind.BooleanKeyword ||
+            firstToken.kind === TS.SyntaxKind.BigIntKeyword ||
+            firstToken.kind === TS.SyntaxKind.CloseBracketToken ||
+            firstToken.kind === TS.SyntaxKind.NullKeyword ||
+            firstToken.kind === TS.SyntaxKind.NumberKeyword ||
+            firstToken.kind === TS.SyntaxKind.ObjectKeyword ||
+            firstToken.kind === TS.SyntaxKind.StringKeyword ||
+            firstToken.kind === TS.SyntaxKind.SymbolKeyword ||
+            firstToken.kind === TS.SyntaxKind.UndefinedKeyword ||
+            firstToken.kind === TS.SyntaxKind.UnknownKeyword ||
+            firstToken.kind === TS.SyntaxKind.VoidKeyword
+        )
+    );
+}
+
+
 
 function lint (
     context: GenericArrayTypeContext
@@ -85,11 +158,7 @@ function lint (
             secondToken = tokens[i+1];
             thirdToken = tokens[i+2];
 
-            if (
-                firstToken.kind === TS.SyntaxKind.Identifier &&
-                secondToken.kind === TS.SyntaxKind.OpenBracketToken &&
-                thirdToken.kind === TS.SyntaxKind.CloseBracketToken
-            ) {
+            if (isMatch(firstToken, secondToken, thirdToken)) {
                 const position = code.getTokenPosition(line, secondToken);
 
                 if (position) {
