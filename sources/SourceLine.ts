@@ -169,7 +169,7 @@ export class SourceLine {
         }
 
         position.column = position.start + 1;
-        position.end = token.text.length;
+        position.end = position.start + token.text.length;
 
         return position;
     }
