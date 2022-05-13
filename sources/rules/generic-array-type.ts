@@ -124,6 +124,8 @@ function isMatch(
             firstToken.kind === TS.SyntaxKind.BooleanKeyword ||
             firstToken.kind === TS.SyntaxKind.BigIntKeyword ||
             firstToken.kind === TS.SyntaxKind.CloseBracketToken ||
+            firstToken.kind === TS.SyntaxKind.CloseParenToken ||
+            firstToken.kind === TS.SyntaxKind.GreaterThanToken ||
             firstToken.kind === TS.SyntaxKind.NullKeyword ||
             firstToken.kind === TS.SyntaxKind.NumberKeyword ||
             firstToken.kind === TS.SyntaxKind.ObjectKeyword ||
