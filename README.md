@@ -27,7 +27,7 @@ Next, install `@highcharts/eslint-plugin-highcharts`:
 $ npm install github:highcharts/eslint-plugin-highcharts --save-dev
 ```
 
-**Note:** If you installed ESLint globally (using the `-g` flag) then you must also install `eslint-plugin-highcharts` globally.
+**Note:** If you installed ESLint globally (using the `-g` flag) then you must also install the plugin globally.
 
 
 
