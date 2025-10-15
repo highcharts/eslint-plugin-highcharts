@@ -1,0 +1,12 @@
+{
+    "extends": [
+        "plugin:@typescript-eslint/eslint-recommended",
+        "plugin:@typescript-eslint/recommended"
+    ],
+    "parser": "@typescript-eslint/parser",
+    "rules": {
+        "@typescript-eslint/no-inferrable-types": 0,
+        "@typescript-eslint/no-namespace": 0,
+        "@typescript-eslint/pretty-length": 0
+    }
+}

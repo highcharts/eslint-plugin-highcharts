@@ -1,6 +1,7 @@
 {
     "name": "@highcharts/eslint-plugin-highcharts",
-    "version": "1.1.1",
+    "license": "ISC",
+    "version": "2.0.0",
     "description": "ESLint rules for the Highcharts project",
     "keywords": [
         "eslint",
@@ -14,17 +15,33 @@
     },
     "main": "lib/index.js",
     "scripts": {
-        "test": "mocha tests --recursive"
+        "build": "tsc -b sources",
+        "build-watch": "npm run build -- --watch",
+        "lint": "eslint sources",
+        "test": "mocha tests --recursive",
+        "test-sources": "tsc -b tests/sources && node tests/sources/index.js"
     },
     "dependencies": {
+        "eslint": "^9.23.0",
         "requireindex": "~1.2.0"
     },
     "devDependencies": {
-        "eslint": "^9.23.0",
-        "mocha": "^11.1.0"
+        "@types/eslint": "7.28.2",
+        "@types/json-schema": "7.0.9",
+        "@types/node": "12.20.36",
+        "@typescript-eslint/eslint-plugin": "^8.28.0",
+        "@typescript-eslint/parser": "^8.28.0",
+        "husky": "7.0.4",
+        "mocha": "^11.1.0",
+        "typescript": "^5.8.2"
     },
     "engines": {
-        "node": ">=22.0.0"
+        "node": ">=22.0.0",
+        "typescript": ">=5.0.0"
     },
-    "license": "ISC"
+    "husky": {
+        "hooks": {
+            "pre-commit": "npm run lint && npm run build && npm test"
+        }
+    }
 }
