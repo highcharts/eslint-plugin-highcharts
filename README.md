@@ -21,13 +21,13 @@ You'll first need to install [ESLint](http://eslint.org):
 $ npm i eslint --save-dev
 ```
 
-Next, install `eslint-plugin-highcharts`:
+Next, install `@highcharts/eslint-plugin-highcharts`:
 
 ```
-$ npm install eslint-plugin-highcharts --save-dev
+$ npm install github:highcharts/eslint-plugin-highcharts --save-dev
 ```
 
-**Note:** If you installed ESLint globally (using the `-g` flag) then you must also install `eslint-plugin-highcharts` globally.
+**Note:** If you installed ESLint globally (using the `-g` flag) then you must also install the plugin globally.
 
 
 
